@@ -294,6 +294,9 @@ class ResPartner(models.Model):
                 self.acteco_ids += ac
         if data.get('url'):
             self.website = data['url']
+        self.sync = True
+        if not self.document_number:
+            self.document_number = data['rut']
 
     def put_remote_user_data(self):
         sync = self.env['ir.config_parameter'].sudo().get_param('account.sync_remote_partners')
@@ -341,7 +344,6 @@ class ResPartner(models.Model):
             self.sync = False
             return
         self._process_data(data)
-        self.sync = True
 
     @api.onchange('name')
     def fill_partner(self):

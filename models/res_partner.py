@@ -299,9 +299,10 @@ class ResPartner(models.Model):
             self.document_number = data['rut']
 
     def put_remote_user_data(self):
-        sync = self.env['ir.config_parameter'].sudo().get_param('account.sync_remote_partners')
-        url = self.env['ir.config_parameter'].sudo().get_param('account.url_remote_partners')
-        token = self.env['ir.config_parameter'].sudo().get_param('account.token_remote_partners')
+        ICPSudo = self.env['ir.config_parameter'].sudo()
+        url = ICPSudo.get_param('account.url_remote_partners')
+        token = ICPSudo.get_param('account.token_remote_partners')
+        sync = ICPSudo.get_param('account.sync_remote_partners')
         if not url or not token or not sync:
             return
         resp = pool.request('PUT',

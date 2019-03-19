@@ -325,7 +325,7 @@ class ResPartner(models.Model):
                             headers={'Content-Type': 'application/json'})
         data = json.loads(resp.data.decode('ISO-8859-1'))
 
-    def get_remote_user_data(self, to_check):
+    def get_remote_user_data(self, to_check, process_data=True):
         ICPSudo = self.env['ir.config_parameter'].sudo()
         url = ICPSudo.get_param('account.url_remote_partners')
         token = ICPSudo.get_param('account.token_remote_partners')
@@ -341,6 +341,8 @@ class ResPartner(models.Model):
                                             ).encode('utf-8'),
                             headers={'Content-Type': 'application/json'})
         data = json.loads(resp.data.decode('iso-8859-1'))
+        if not process_data:
+            return data
         if not data:
             self.sync = False
             return

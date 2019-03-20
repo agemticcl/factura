@@ -102,6 +102,9 @@ class ResPartner(models.Model):
         string="syncred",
         default=False,
     )
+    last_sync_update = fields.Datetime(
+        string="Fecha Actualizado",
+    )
 
     def write(self, vals):
         result = super(ResPartner, self).write(vals)
@@ -297,12 +300,13 @@ class ResPartner(models.Model):
         self.sync = True
         if not self.document_number:
             self.document_number = data['rut']
+        self.last_sync_update = data['actualizado']
 
     def put_remote_user_data(self):
         ICPSudo = self.env['ir.config_parameter'].sudo()
-        url = ICPSudo.get_param('account.url_remote_partners')
-        token = ICPSudo.get_param('account.token_remote_partners')
-        sync = ICPSudo.get_param('account.sync_remote_partners')
+        url = ICPSudo.get_param('partner.url_remote_partners')
+        token = ICPSudo.get_param('partner.token_remote_partners')
+        sync = ICPSudo.get_param('partner.sync_remote_partners')
         if not url or not token or not sync:
             return
         resp = pool.request('PUT',
@@ -327,8 +331,8 @@ class ResPartner(models.Model):
 
     def get_remote_user_data(self, to_check, process_data=True):
         ICPSudo = self.env['ir.config_parameter'].sudo()
-        url = ICPSudo.get_param('account.url_remote_partners')
-        token = ICPSudo.get_param('account.token_remote_partners')
+        url = ICPSudo.get_param('partner.url_remote_partners')
+        token = ICPSudo.get_param('partner.token_remote_partners')
         if not url or not token:
             return
         resp = pool.request('POST',
@@ -352,8 +356,34 @@ class ResPartner(models.Model):
     def fill_partner(self):
         if self.sync:
             return
-        if self.document_number and self.check_vat_cl(self.document_number.replace('.','').replace('-', '')):
+        if self.document_number and self.check_vat_cl(self.document_number.replace('.', '').replace('-', '')):
             self.get_remote_user_data(self.document_number)
-        elif self.name and self.check_vat_cl(self.name.replace('.','').replace('-', '')):
+        elif self.name and self.check_vat_cl(self.name.replace('.', '').replace('-', '')):
             self.get_remote_user_data(self.name)
+
+    @api.model
+    def _check_need_update(self):
+        if self.sync:
+            ICPSudo = self.env['ir.config_parameter'].sudo()
+            url = ICPSudo.get_param('partner.url_remote_partners')
+            token = ICPSudo.get_param('partner.token_remote_partners')
+            if not url or not token:
+                return
+            resp = pool.request('GET',
+                                url,
+                                body=json.dumps(
+                                                    {
+                                                        'rut': self.document_number,
+                                                        'token': token,
+                                                        'autorizado': self.last_sync_update,
+                                                    }
+                                                ).encode('utf-8'),
+                                headers={'Content-Type': 'application/json'})
+            data = json.loads(resp.data.decode('iso-8859-1'))
+            if data:
+                self.sync = False
+                self.fill_partner
+        if self.document_number and ICPSudo.get_param('partner.sync_remote_partners'):
+            self.put_remote_user_data()
+
 

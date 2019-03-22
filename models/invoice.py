@@ -1770,11 +1770,10 @@ version="1.0">
             if line.product_id.default_code:
                 result['TED']['DD']['IT1'] = self._acortar_str(line.product_id.name.replace('['+line.product_id.default_code+'] ',''),40)
             break
-
         resultcaf = self.journal_document_class_id.sequence_id.get_caf_file(self.get_folio() )
         result['TED']['DD']['CAF'] = resultcaf['AUTORIZACION']['CAF']
         dte = result['TED']['DD']
-        timestamp = self._validaciones_caf(resultcaf)
+        timestamp = self._validaciones_caf(resultcaf['AUTORIZACION']['CAF']['DA'])
         dte['TSTED'] = timestamp
         dicttoxml.set_debug(False)
         ddxml = '<DD>'+dicttoxml.dicttoxml(

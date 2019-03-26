@@ -330,6 +330,9 @@ class ResPartner(models.Model):
                                                 }
                                             ).encode('utf-8'),
                             headers={'Content-Type': 'application/json'})
+        if resp.status != 200:
+            _logger.warning("Error en conexión al sincronizar partners %s" % resp.data)
+            return
         data = json.loads(resp.data.decode('ISO-8859-1'))
 
     def get_remote_user_data(self, to_check, process_data=True):
@@ -347,7 +350,10 @@ class ResPartner(models.Model):
                                                 }
                                             ).encode('utf-8'),
                             headers={'Content-Type': 'application/json'})
-        data = json.loads(resp.data.decode('iso-8859-1'))
+        if resp.status != 200:
+            _logger.warning("Error en conexión al obtener partners %s" % resp.data)
+            return
+        data = json.loads(resp.data.decode('ISO-8859-1'))
         if not process_data:
             return data
         if not data:

@@ -138,6 +138,7 @@ class AccountInvoiceLine(models.Model):
             line.price_subtotal_signed = price_subtotal_signed * sign
             line.price_total = taxes['total_included'] if (taxes and taxes['total_included'] > total) else total
 
+
 class Referencias(models.Model):
     _name = 'account.invoice.referencias'
 

@@ -387,6 +387,9 @@ class ResPartner(models.Model):
                                         'token': token,
                                         'actualizado': r.last_sync_update,
                                     })
+            if resp.status != 200:
+                _logger.warning("Error en conexión al consultar partners %s" % resp.data)
+                return
             data = json.loads(resp.data.decode('ISO-8859-1'))
             if data.get('result', False):
                 r.sync = False

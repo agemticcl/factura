@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api, SUPERUSER_ID
+from odoo import models, fields, api
 from odoo.tools.translate import _
 from odoo.exceptions import UserError
 import logging
@@ -311,7 +311,7 @@ class ValidarDTEWizard(models.TransientModel):
         for inv in self.invoice_ids:
             if inv.claim in ['ACD', 'RCD']:
                 continue
-            signature_id = self.env['res.users'].browse(SUPERUSER_ID).get_digital_signature(inv.company_id)
+            signature_id = self.env['res.users'].sudo().get_digital_signature(inv.company_id)
             if not signature_id:
                 raise UserError(_('''There is no Signer Person with an \
             authorized signature for you in the system. Please make sure that \

@@ -93,6 +93,9 @@ class ColaEnvio(models.Model):
             except Exception as e:
                 _logger.warning("Error en envío Cola")
                 _logger.warning(str(e))
+        elif self.tipo_trabajo == 'envio' and docs[0].sii_xml_request and (docs[0].sii_xml_request.sii_send_ident or docs[0].sii_xml_request.state in [ 'Aceptado', 'Enviado', 'Rechazado']):
+            self.tipo_trabajo = 'consulta'
+
 
     @api.model
     def _cron_procesar_cola(self):

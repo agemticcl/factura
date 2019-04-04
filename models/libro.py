@@ -1204,11 +1204,10 @@ version="1.0">
 
     @api.multi
     def do_dte_send_book(self):
-        if self.state not in ['NoEnviado', 'Rechazado']:
+        if self.state not in ['draft', 'NoEnviado', 'Rechazado']:
             raise UserError("El Libro  ya ha sido enviado")
         if not self.sii_xml_request:
             self._validar()
-        self.sii_xml_request.send_xml()
         self.env['sii.cola_envio'].create(
                     {
                         'doc_ids':[self.id],
@@ -1216,6 +1215,10 @@ version="1.0">
                         'user_id':self.env.user.id,
                         'tipo_trabajo': 'envio',
                     })
+
+    def do_dte_send(self, n_atencion=''):
+        self.sii_xml_request.send_xml()
+        return self.sii_xml_request
 
     def _get_send_status(self):
         self.sii_xml_request.get_send_status()

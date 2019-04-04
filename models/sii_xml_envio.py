@@ -189,6 +189,8 @@ class SIIXMLEnvio(models.Model):
         return retorno
 
     def send_xml(self, post='/cgi_dte/UPL/DTEUpload'):
+        if self.state not in ['draft', 'NoEnviado']:
+            return
         retorno = { 'state': 'NoEnviado' }
         if not self.company_id.dte_service_provider:
             raise UserError(_("Not Service provider selected!"))

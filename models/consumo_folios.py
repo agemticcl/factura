@@ -839,30 +839,27 @@ version="1.0">
             doc_id,
             'consu')
         doc_id += '.xml'
-        self.sii_xml_request = envio_dte
-        return envio_dte, doc_id
+        self.sii_xml_request = self.env['sii.xml.envio'].create({
+            'xml_envio': envio_dte,
+            'name': doc_id,
+            'company_id': self.company_id.id,
+            'state': 'draft',
+        }).id
 
     @api.multi
     def do_dte_send_consumo_folios(self):
         if self.state not in ['NoEnviado', 'Rechazado']:
             raise UserError("El Libro  ya ha sido enviado")
-        envio_dte, doc_id = self._validar()
-        company_id = self.company_id
-        result = self.env['account.move.book'].send_xml_file(envio_dte, doc_id, company_id)
-        if result['sii_result'] == 'Enviado':
-            self.env['sii.cola_envio'].create(
+        if not self.sii_xml_request:
+            self._validar()
+        self.sii_xml_request.send_xml()
+        self.env['sii.cola_envio'].create(
                     {
                         'doc_ids':[self.id],
                         'model':'account.move.consumo_folios',
                         'user_id':self.env.user.id,
-                        'tipo_trabajo': 'consulta',
+                        'tipo_trabajo': 'envio',
                     })
-        self.write({
-            'sii_xml_response':result['sii_xml_response'],
-            'sii_send_ident':result['sii_send_ident'],
-            'state': result['sii_result'],
-            'sii_xml_request':envio_dte
-            })
 
     def _get_send_status(self):
         self.sii_xml_request.get_send_status()

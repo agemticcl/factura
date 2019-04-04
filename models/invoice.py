@@ -1506,17 +1506,14 @@ version="1.0">
 
     @api.multi
     def _es_boleta(self):
-        if self.sii_document_class_id.sii_code in [35, 38, 39, 41, 70, 71]:
-            return True
-        return False
+        return self.sii_document_class_id.es_boleta()
 
     @api.multi
     def _nc_boleta(self):
         if not self.referencias or self.type != "out_refund":
             return False
         for r in self.referencias:
-            if r.sii_referencia_TpoDocRef.sii_code in [35, 38, 39, 41, 70, 71]:
-                return True
+            return r.sii_referencia_TpoDocRef.es_nc_boleta()
         return False
 
     def _actecos_emisor(self):

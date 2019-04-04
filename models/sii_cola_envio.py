@@ -54,7 +54,7 @@ class ColaEnvio(models.Model):
     def _es_doc(self, doc):
         if hasattr(doc, 'sii_message'):
             return doc.sii_message
-        return False
+        return True
 
     def _procesar_tipo_trabajo(self):
         docs = self.env[self.model].sudo(self.user_id.id).browse(ast.literal_eval(self.doc_ids))

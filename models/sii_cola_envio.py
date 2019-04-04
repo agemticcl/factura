@@ -47,7 +47,7 @@ class ColaEnvio(models.Model):
         doc.send_exchange()
 
     def es_boleta(self, doc):
-        if hasattr(doc,  'document_class_id'):
+        if hasattr(doc, 'document_class_id'):
             return doc.document_class_id.es_boleta()
         return False
 

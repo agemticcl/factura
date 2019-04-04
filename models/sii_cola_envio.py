@@ -46,6 +46,11 @@ class ColaEnvio(models.Model):
     def enviar_email(self, doc):
         doc.send_exchange()
 
+    def es_boleta(self, doc):
+        if hasattr(doc,  'document_class_id'):
+            return doc.document_class_id.es_boleta()
+        return False
+
     def _procesar_tipo_trabajo(self):
         docs = self.env[self.model].sudo(self.user_id.id).browse(ast.literal_eval(self.doc_ids))
         if self.tipo_trabajo == 'pasivo':
@@ -62,7 +67,7 @@ class ColaEnvio(models.Model):
                     _logger.warning(str(e))
                 docs.get_sii_result()
             return
-        if (docs[0].sii_message or docs[0].document_class_id.es_boleta()) and docs[0].sii_result in ['Proceso', 'Reparo', 'Rechazado', 'Anulado']:
+        if (docs[0].sii_message or self.es_boleta(docs[0])) and docs[0].sii_result in ['Proceso', 'Reparo', 'Rechazado', 'Anulado']:
             if self.send_email and docs[0].sii_result in ['Proceso', 'Reparo']:
                 for doc in docs:
                     self.enviar_email(doc)

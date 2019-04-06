@@ -57,6 +57,9 @@ class ColaEnvio(models.Model):
         return True
 
     def _procesar_tipo_trabajo(self):
+        if not self.user_id.active:
+            _logger.warning("¡Usuario %s desactivado!" % self.user_id.name)
+            return
         docs = self.env[self.model].sudo(self.user_id.id).browse(ast.literal_eval(self.doc_ids))
         if self.tipo_trabajo == 'pasivo':
             if docs[0].sii_xml_request and docs[0].sii_xml_request.state in ['Aceptado', 'Enviado', 'Rechazado', 'Anulado']:

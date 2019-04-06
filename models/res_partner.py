@@ -298,6 +298,13 @@ class ResPartner(models.Model):
             for a in data['actecos']:
                 ac = self.env['sii.document_class'].search([('code', '=', a)])
                 self.acteco_ids += ac
+        if data.get('glosa_giro'):
+            query = [('name', '=', data.get('glosa_giro'))]
+            ad = self.env['sii.activity.description'].search(query)
+            if not ad:
+                ad = self.env['sii.activity.description'].create({
+                                    'name': data.get('glosa_giro')})
+            self.activity_description = ad.id
         if data.get('url'):
             self.website = data['url']
         self.sync = True
@@ -326,7 +333,8 @@ class ResPartner(models.Model):
                                                     'telefono': self.phone,
                                                     'actecos': [ac.code for ac in self.acteco_ids],
                                                     'url': self.website,
-                                                    'origen': ICPSudo.get_param('web.base.url')
+                                                    'origen': ICPSudo.get_param('web.base.url'),
+                                                    'glosa_giro': self.activity_description.name,
                                                 }
                                             ).encode('utf-8'),
                             headers={'Content-Type': 'application/json'})

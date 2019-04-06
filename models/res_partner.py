@@ -114,7 +114,7 @@ class ResPartner(models.Model):
                 if k in ('name', 'dte_email', 'street', 'email', 'acteco_ids', 'website'):
                     try:
                         for r in self:
-                            if r.sync and r.sii_document_number and not r.parent_id:
+                            if r.sync and r.document_number and not r.parent_id:
                                 r.put_remote_user_data()
                     except Exception as e:
                         _logger.warning("Error en subida información %s" % str(e))
@@ -307,6 +307,8 @@ class ResPartner(models.Model):
             self.activity_description = ad.id
         if data.get('url'):
             self.website = data['url']
+        if data.get('logo'):
+            self.image = data['logo']
         self.sync = True
         if not self.document_number:
             self.document_number = data['rut']
@@ -335,6 +337,7 @@ class ResPartner(models.Model):
                                                     'url': self.website,
                                                     'origen': ICPSudo.get_param('web.base.url'),
                                                     'glosa_giro': self.activity_description.name,
+                                                    'logo': self.image.decode(),
                                                 }
                                             ).encode('utf-8'),
                             headers={'Content-Type': 'application/json'})

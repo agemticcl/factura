@@ -337,7 +337,7 @@ class ResPartner(models.Model):
                                                     'url': self.website,
                                                     'origen': ICPSudo.get_param('web.base.url'),
                                                     'glosa_giro': self.activity_description.name,
-                                                    'logo': self.image.decode(),
+                                                    'logo': self.image.decode() if self.image else False,
                                                 }
                                             ).encode('utf-8'),
                             headers={'Content-Type': 'application/json'})

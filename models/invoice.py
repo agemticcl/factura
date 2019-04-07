@@ -1874,6 +1874,8 @@ version="1.0">
                 lines['MontoItem'] = currency_base.round(price_total)
             if no_product:
                 lines['MontoItem'] = 0
+            if lines['MontoItem'] < 0:
+                raise UserError(_('No pueden ir valores negativos en las líneas de detalle'))
             line_number += 1
             if lines.get('PrcItem', 1) == 0:
                 del(lines['PrcItem'])

@@ -2293,9 +2293,9 @@ version="1.0">
         dte_receptors = self.commercial_partner_id.child_ids + self.commercial_partner_id
         email_to = ''
         for dte_email in dte_receptors:
-            if not dte_email.send_dte:
+            if not dte_email.send_dte and dte_email.email:
                 continue
-            email_to += dte_email.name+','
+            email_to += dte_email.email+','
         values = {
                 'res_id': self.id,
                 'email_from': dte_email_id.name_get()[0][1],

@@ -104,6 +104,7 @@ class Libro(models.Model):
     state = fields.Selection([
             ('draft', 'Borrador'),
             ('NoEnviado', 'No Enviado'),
+            ('EnCola', 'En Cola'),
             ('Enviado', 'Enviado'),
             ('Aceptado', 'Aceptado'),
             ('Rechazado', 'Rechazado'),

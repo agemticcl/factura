@@ -1028,7 +1028,7 @@ class UploadXMLWizard(models.TransientModel):
                     inv._onchange_partner_id()
                     inv.action_move_create()
                     guardar = {
-                        'document_class_id': inv.sii_document_class_id.id,
+                        'document_class_id': inv.document_class_id.id,
                         'sii_document_number': inv.sii_document_number
                     }
                     inv.move_id.write(guardar)

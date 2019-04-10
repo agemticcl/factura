@@ -1210,11 +1210,12 @@ version="1.0">
             self._validar()
         self.env['sii.cola_envio'].create(
                     {
-                        'doc_ids':[self.id],
-                        'model':'account.move.book',
-                        'user_id':self.env.user.id,
+                        'doc_ids': [self.id],
+                        'model': 'account.move.book',
+                        'user_id': self.env.user.id,
                         'tipo_trabajo': 'envio',
                     })
+        self.state = 'EnCola'
 
     def do_dte_send(self, n_atencion=''):
         self.sii_xml_request.send_xml()
@@ -1230,6 +1231,13 @@ version="1.0">
     @api.multi
     def ask_for_dte_status(self):
         self._get_send_status()
+
+    def get_sii_result(self):
+        for r in self:
+            if r.sii_xml_request.state == 'NoEnviado':
+                r.state = 'EnCola'
+                continue
+            r.state = r.sii_xml_request.state
 
 
 class Boletas(models.Model):

@@ -691,7 +691,7 @@ version="1.0">
         TpoDocs = []
         recs = []
         for rec in self.with_context(lang='es_CL').move_ids:
-            document_class_id = rec.document_class_id if 'document_class_id' in rec else rec.sii_document_class_id
+            document_class_id = rec.document_class_id
             if not document_class_id or document_class_id.sii_code not in [39, 41, 61]:
                 _logger.warning("Por este medio solamente se pueden declarar Boletas o Notas de crédito Electrónicas, por favor elimine el documento %s del listado" % rec.name)
                 continue
@@ -854,11 +854,12 @@ version="1.0">
             self._validar()
         self.env['sii.cola_envio'].create(
                     {
-                        'doc_ids':[self.id],
-                        'model':'account.move.consumo_folios',
-                        'user_id':self.env.user.id,
+                        'doc_ids': [self.id],
+                        'model': 'account.move.consumo_folios',
+                        'user_id': self.env.user.id,
                         'tipo_trabajo': 'envio',
                     })
+        self.state = 'EnCola'
 
     def do_dte_send(self, n_atencion=''):
         self.sii_xml_request.send_xml()
@@ -874,6 +875,13 @@ version="1.0">
     @api.multi
     def ask_for_dte_status(self):
         self._get_send_status()
+
+    def get_sii_result(self):
+        for r in self:
+            if r.sii_xml_request.state == 'NoEnviado':
+                r.state = 'EnCola'
+                continue
+            r.state = r.sii_xml_request.state
 
 
 class DetalleCOnsumoFolios(models.Model):

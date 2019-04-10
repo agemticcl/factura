@@ -14,6 +14,7 @@ try:
 except:
     _logger.warning("no se ha cargado urllib3")
 
+
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
@@ -343,6 +344,18 @@ class ResPartner(models.Model):
                             headers={'Content-Type': 'application/json'})
         if resp.status != 200:
             _logger.warning("Error en conexión al sincronizar partners %s" % resp.data)
+            message = ''
+            if resp.status == 403:
+                data = json.loads(resp.data.decode('ISO-8859-1'))
+                message = data['message']
+            else:
+                message = str(resp.data)
+            self.env['bus.bus'].sendone((self._cr.dbname, 'res.partner', self.env.user.partner_id.id), {
+                'title': "Error en conexión al sincronizar partners",
+                'message': message,
+                'url': 'res_config',
+                'type': 'dte_notif',
+            })
             return
         data = json.loads(resp.data.decode('ISO-8859-1'))
 
@@ -363,6 +376,18 @@ class ResPartner(models.Model):
                             headers={'Content-Type': 'application/json'})
         if resp.status != 200:
             _logger.warning("Error en conexión al obtener partners %s" % resp.data)
+            message = ''
+            if resp.status == 403:
+                data = json.loads(resp.data.decode('ISO-8859-1'))
+                message = data['message']
+            else:
+                message = str(resp.data)
+            self.env['bus.bus'].sendone((self._cr.dbname, 'res.partner', self.env.user.partner_id.id), {
+                    'title': "Error en conexión al obtener partners",
+                    'message': message,
+                    'url': 'res_config',
+                    'type': 'dte_notif',
+                })
             return
         data = json.loads(resp.data.decode('ISO-8859-1'))
         if not process_data:
@@ -400,6 +425,18 @@ class ResPartner(models.Model):
                                     })
             if resp.status != 200:
                 _logger.warning("Error en conexión al consultar partners %s" % resp.data)
+                message = ''
+                if resp.status == 403:
+                    data = json.loads(resp.data.decode('ISO-8859-1'))
+                    message = data['message']
+                else:
+                    message = str(resp.data)
+                self.env['bus.bus'].sendone((self._cr.dbname, 'res.partner', self.env.user.partner_id.id), {
+                    'title': "Error en conexión al consultar partners",
+                    'message': message,
+                    'url': 'res_config',
+                    'type': 'dte_notif',
+                })
                 return
             data = json.loads(resp.data.decode('ISO-8859-1'))
             if data.get('result', False):

@@ -115,7 +115,11 @@ class ResPartner(models.Model):
                 if k in ('name', 'dte_email', 'street', 'email', 'acteco_ids', 'website'):
                     try:
                         for r in self:
-                            if r.sync and r.document_number and not r.parent_id:
+                            if r.sync and r.document_number \
+                                and self.check_vat_cl(
+                                        r.document_number.replace('.', '')\
+                                        .replace('-', '')) \
+                                and not r.parent_id:
                                 r.put_remote_user_data()
                     except Exception as e:
                         _logger.warning("Error en subida información %s" % str(e))

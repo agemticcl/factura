@@ -87,7 +87,7 @@ class ColaEnvio(models.Model):
             except Exception as e:
                 _logger.warning("Error en Consulta")
                 _logger.warning(str(e))
-        elif self.tipo_trabajo == 'envio' and (not docs[0].sii_xml_request or not docs[0].sii_xml_request.sii_send_ident or docs[0].sii_xml_request.state not in [ 'Aceptado', 'Enviado']):
+        elif self.tipo_trabajo == 'envio' and (not docs[0].sii_xml_request or not docs[0].sii_xml_request.sii_send_ident or docs[0].sii_xml_request.state not in ['Aceptado', 'Enviado']):
             try:
                 envio_id = docs.with_context(user=self.user_id.id).do_dte_send(self.n_atencion)
                 if envio_id.sii_send_ident:

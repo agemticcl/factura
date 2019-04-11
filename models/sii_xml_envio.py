@@ -2,6 +2,7 @@
 from odoo import fields, models, api
 from odoo.tools.translate import _
 from .invoice import server_url
+from odoo.exceptions import UserError
 from lxml import etree
 import collections
 import logging
@@ -155,7 +156,7 @@ class SIIXMLEnvio(models.Model):
         return token
 
     def get_token(self, user_id, company_id):
-        signature_id = user_id.get_digital_signature( company_id )
+        signature_id = user_id.get_digital_signature(company_id)
         seed = self.get_seed(company_id)
         template_string = self.create_template_seed(seed)
         seed_firmado = self.sign_seed(
@@ -185,16 +186,19 @@ class SIIXMLEnvio(models.Model):
         if respuesta_dict['RECEPCIONDTE']['STATUS'] != '0':
             _logger.warning(connection_status[respuesta_dict['RECEPCIONDTE']['STATUS']])
         else:
-            retorno.update({'state': 'Enviado','sii_send_ident': respuesta_dict['RECEPCIONDTE']['TRACKID']})
+            retorno.update({
+                            'state': 'Enviado',
+                            'sii_send_ident': respuesta_dict['RECEPCIONDTE']['TRACKID']
+                            })
         return retorno
 
     def send_xml(self, post='/cgi_dte/UPL/DTEUpload'):
         if self.state not in ['draft', 'NoEnviado']:
             return
-        retorno = { 'state': 'NoEnviado' }
+        retorno = {'state': 'NoEnviado'}
         if not self.company_id.dte_service_provider:
             raise UserError(_("Not Service provider selected!"))
-        token = self.get_token( self.user_id, self.company_id )
+        token = self.get_token(self.user_id, self.company_id)
         url = 'https://palena.sii.cl'
         if self.company_id.dte_service_provider == 'SIICERT':
             url = 'https://maullin.sii.cl'
@@ -213,7 +217,7 @@ class SIIXMLEnvio(models.Model):
         headers.update({'Content-Length': '{}'.format(len(multi[0]))})
         response = pool.request_encode_body('POST', url+post, params, headers)
         retorno.update({ 'sii_xml_response': response.data })
-        if response.status != 200:
+        if response.status != 200 or not response.data or response.data == '':
             return retorno
         respuesta_dict = xmltodict.parse(response.data)
         retorno = self.procesar_recepcion(retorno, respuesta_dict)

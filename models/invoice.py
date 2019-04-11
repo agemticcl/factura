@@ -2293,7 +2293,7 @@ version="1.0">
         dte_receptors = self.commercial_partner_id.child_ids + self.commercial_partner_id
         email_to = ''
         for dte_email in dte_receptors:
-            if not dte_email.send_dte and dte_email.email:
+            if not dte_email.send_dte or not dte_email.email:
                 continue
             email_to += dte_email.email+','
         values = {

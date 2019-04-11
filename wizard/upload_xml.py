@@ -226,7 +226,7 @@ class UploadXMLWizard(models.TransientModel):
             [
                 ('reference', '=', doc['Encabezado']['IdDoc']['Folio']),
                 ('partner_id', '=', partner_id.id),
-                ('sii_document_class_id.sii_code', '=', sii_document_class)
+                ('document_class_id.sii_code', '=', sii_document_class)
             ])
         company_id = self.env['res.company'].search([
                 ('vat', '=', self.format_rut(doc['Encabezado']['Receptor']['RUTRecep']))
@@ -901,7 +901,7 @@ class UploadXMLWizard(models.TransientModel):
             [
                 ('reference', '=', IdDoc.find("Folio").text),
                 ('type', 'in', type),
-                ('sii_document_class_id.sii_code', '=', IdDoc.find("TipoDTE").text),
+                ('document_class_id.sii_code', '=', IdDoc.find("TipoDTE").text),
                 ('partner_id.vat', '=', self.format_rut(Emisor.find("RUTEmisor").text)),
             ])
 

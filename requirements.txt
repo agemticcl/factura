@@ -1,10 +1,8 @@
 facturacion_electronica
-base64
-hashlib
-suds
+suds-jurko
 signxml
-ast
 num2words
 xlsxwriter
-io
 pillow
+xmltodict
+dicttoxml

@@ -2184,6 +2184,16 @@ version="1.0">
             except Exception as e:
                 _logger.warning("Error al obtener DTE Status: %s" %str(e))
         self.get_sii_result()
+        for r in self:
+            if r.sii_result == 'Rechazado':
+                self.env['bus.bus'].sendone((self._cr.dbname,
+                                            'account.invoice',
+                                            self.env.user.partner_id.id),
+                                            {
+                                                'title': "Documento Rechazado",
+                                                'message': "%s" % r.name,
+                                                'type': 'dte_notif',
+                                            })
 
     def set_dte_claim(self, rut_emisor=False, company_id=False, sii_document_number=False, document_class_id=False, claim=False):
         rut_emisor = rut_emisor or self.format_vat(self.company_id.partner_id.vat)

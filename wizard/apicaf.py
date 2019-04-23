@@ -34,8 +34,7 @@ class apicaf(models.TransientModel):
             'token': token,
             'rut': self.company_id.document_number,
             'etapa': self.etapa,
-            'entorno': 'produccion' if self.company_id.dte_service_provider ==  'SII' else 'certificacion',
-            'id_peticion': self.id_peticion
+            'entorno': 'produccion' if self.company_id.dte_service_provider ==  'SII' else 'certificacion'
         }
         resp = pool.request('POST', url, body=json.dumps(params))
         if resp.status != 200:

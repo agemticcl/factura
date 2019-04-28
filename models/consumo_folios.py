@@ -23,49 +23,24 @@ except:
 
 #urllib3.disable_warnings()
 pool = urllib3.PoolManager(timeout=30)
-
-import textwrap
-
 _logger = logging.getLogger(__name__)
-
-try:
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives.serialization import load_pem_private_key
-    import OpenSSL
-    from OpenSSL import crypto
-    type_ = crypto.FILETYPE_PEM
-except:
-    _logger.warning('Cannot import OpenSSL library')
-
 try:
     import xmltodict
 except ImportError:
     _logger.info('Cannot import xmltodict library')
-
 try:
     import dicttoxml
     dicttoxml.set_debug(False)
 except ImportError:
     _logger.info('Cannot import dicttoxml library')
-
 try:
     import base64
 except ImportError:
     _logger.info('Cannot import base64 library')
-
-try:
-    import hashlib
-except ImportError:
-    _logger.info('Cannot import hashlib library')
-
 server_url = {'SIICERT': 'https://maullin.sii.cl/DTEWS/', 'SII': 'https://palena.sii.cl/DTEWS/'}
-
-BC = '''-----BEGIN CERTIFICATE-----\n'''
-EC = '''\n-----END CERTIFICATE-----\n'''
 
 # hardcodeamos este valor por ahora
 import os, sys
-USING_PYTHON2 = True if sys.version_info < (3, 0) else False
 xsdpath = os.path.dirname(os.path.realpath(__file__)).replace('/models','/static/xsd/')
 
 connection_status = {
@@ -425,57 +400,14 @@ version="1.0">
     def get_token(self, seed_file, company_id):
         return self.env['account.move.book'].get_token(seed_file, company_id)
 
-    def ensure_str(self,x, encoding="utf-8", none_ok=False):
-        if none_ok is True and x is None:
-            return x
-        if not isinstance(x, str):
-            x = x.decode(encoding)
-        return x
-
-    def sign_full_xml(self, message, privkey, cert, uri, type='consu'):
-        doc = etree.fromstring(message)
-        string = etree.tostring(doc[0])
-        mess = etree.tostring(etree.fromstring(string), method="c14n")
-        digest = base64.b64encode(self.digest(mess))
-        reference_uri='#'+uri
-        signed_info = Element("SignedInfo")
-        c14n_method = SubElement(signed_info, "CanonicalizationMethod", Algorithm='http://www.w3.org/TR/2001/REC-xml-c14n-20010315')
-        sign_method = SubElement(signed_info, "SignatureMethod", Algorithm='http://www.w3.org/2000/09/xmldsig#rsa-sha1')
-        reference = SubElement(signed_info, "Reference", URI=reference_uri)
-        transforms = SubElement(reference, "Transforms")
-        SubElement(transforms, "Transform", Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315")
-        digest_method = SubElement(reference, "DigestMethod", Algorithm="http://www.w3.org/2000/09/xmldsig#sha1")
-        digest_value = SubElement(reference, "DigestValue")
-        digest_value.text = digest
-        signed_info_c14n = etree.tostring(signed_info,method="c14n",exclusive=False,with_comments=False,inclusive_ns_prefixes=None)
-        att = 'xmlns="http://www.w3.org/2000/09/xmldsig#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
-        #@TODO Find better way to add xmlns:xsi attrib
-        signed_info_c14n = signed_info_c14n.decode().replace("<SignedInfo>","<SignedInfo %s>" % att)
-        sig_root = Element("Signature",attrib={'xmlns':'http://www.w3.org/2000/09/xmldsig#'})
-        sig_root.append(etree.fromstring(signed_info_c14n))
-        signature_value = SubElement(sig_root, "SignatureValue")
-        key = crypto.load_privatekey(type_,privkey.encode('ascii'))
-        signature = crypto.sign(key,signed_info_c14n,'sha1')
-        signature_value.text =textwrap.fill(base64.b64encode(signature).decode(),64)
-        key_info = SubElement(sig_root, "KeyInfo")
-        key_value = SubElement(key_info, "KeyValue")
-        rsa_key_value = SubElement(key_value, "RSAKeyValue")
-        modulus = SubElement(rsa_key_value, "Modulus")
-        key = load_pem_private_key(privkey.encode('ascii'),password=None, backend=default_backend())
-        longs = self.env['account.move.book'].long_to_bytes(key.public_key().public_numbers().n)
-        modulus.text =  textwrap.fill(base64.b64encode(longs).decode(),64)
-        exponent = SubElement(rsa_key_value, "Exponent")
-        longs = self.env['account.move.book'].long_to_bytes(key.public_key().public_numbers().e)
-        exponent.text = self.ensure_str(base64.b64encode(longs).decode())
-        x509_data = SubElement(key_info, "X509Data")
-        x509_certificate = SubElement(x509_data, "X509Certificate")
-        x509_certificate.text = '\n'+textwrap.fill(cert,64)
-        msg = etree.tostring(sig_root).decode()
-        msg = msg if self.xml_validator(msg, 'sig') else ''
-        fulldoc = message.replace('</ConsumoFolios>',msg+'\n</ConsumoFolios>')
-        fulldoc = fulldoc
-        fulldoc = '<?xml version="1.0" encoding="ISO-8859-1"?>\n'+fulldoc if self.xml_validator(fulldoc, type) else ''
-        return fulldoc
+    def sign_full_xml(self, message, uri, type='consu'):
+        user_id = self.env.user
+        signature_id = user_id.get_digital_signature(self.company_id)
+        if not signature_id:
+            raise UserError(_('''There are not a Signature Cert Available for this user, please upload your signature or tell to someelse.'''))
+        sig_root = signature_id.firmar(message, uri, type)
+        msg = etree.tostring(sig_root)
+        return msg if self.xml_validator(msg, type) else ''
 
     def get_resolution_data(self, comp_id):
         resolution_data = {
@@ -500,10 +432,6 @@ version="1.0">
         rut = value[:10] + '-' + value[10:]
         rut = rut.replace('CL0','').replace('CL','')
         return rut
-
-    def digest(self, data):
-        sha1 = hashlib.new('sha1', data)
-        return sha1.digest()
 
     @api.multi
     def validar_consumo_folios(self):
@@ -835,8 +763,6 @@ version="1.0">
         	xml_pret = xml_pret.replace('<key name="'+str(TpoDoc)+'_folios">','').replace('</key>','\n').replace('<key name="'+str(TpoDoc)+'_folios"/>','\n')
         envio_dte = self.sign_full_xml(
             xml_pret,
-            signature_id.priv_key,
-            certp,
             doc_id,
             'consu')
         doc_id += '.xml'

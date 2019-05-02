@@ -32,6 +32,11 @@ class AccountJournalSiiDocumentClass(models.Model):
             help="""This field contains the information related to the numbering \
             of the documents entries of this document type.""",
         )
+    journal_id = fields.Many2one(
+            'account.journal',
+            string='Journal',
+            required=True,
+        )
     sequence = fields.Integer(
             string='Sequence',
         )

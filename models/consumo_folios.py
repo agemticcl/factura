@@ -703,8 +703,6 @@ version="1.0">
         'user_signature_key' module has been installed and enable a digital \
         signature, for you or make the signer to authorize you to use his \
         signature.'''))
-        certp = signature_id.cert.replace(
-            BC, '').replace(EC, '').replace('\n', '')
         resumenes, TpoDocs = self._get_resumenes(marc=True)
         Resumen=[]
         listado = [ 'TipoDocumento', 'MntNeto', 'MntIva', 'TasaIVA', 'MntExento', 'MntTotal', 'FoliosEmitidos',  'FoliosAnulados', 'FoliosUtilizados', 'itemUtilizados' ]

@@ -136,10 +136,7 @@ class SIIXMLEnvio(models.Model):
         xml_seed = u'<getToken><Semilla>%s</Semilla></getToken>' \
             % (seed)
         signature_id = user_id.get_digital_signature(company_id)
-        signed_node = signature_id.firmar(xml_seed, type="token")
-        msg = etree.tostring(
-            signed_node, pretty_print=True).decode()
-        return msg
+        return signature_id.firmar(xml_seed, type="token")
 
     def _get_token(self, seed_file, company_id):
         url = server_url[company_id.dte_service_provider] + 'GetTokenFromSeed.jws?WSDL'
@@ -223,6 +220,8 @@ class SIIXMLEnvio(models.Model):
         return retorno
 
     def get_send_status(self, user_id=False):
+        if not self.sii_send_ident:
+            self.state = "NoEnviado"
         user_id = user_id or self.user_id
         token = self.get_token(user_id, self.company_id)
         url = server_url[self.company_id.dte_service_provider] + 'QueryEstUp.jws?WSDL'
@@ -247,8 +246,6 @@ class SIIXMLEnvio(models.Model):
         if resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] == "-11":
             if resp['SII:RESPUESTA']['SII:RESP_HDR']['ERR_CODE'] == "2":
                 status = {'warning':{'title':_('Estado -11'), 'message': _("Estado -11: Espere a que sea aceptado por el SII, intente en 5s más")}}
-            else:
-                status = {'warning':{'title':_('Estado -11'), 'message': _("Estado -11: error 1Algo a salido mal, revisar carátula")}}
         if resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] in ["EPR", "LOK"]:
             result.update({ "state": "Aceptado" })
             if resp['SII:RESPUESTA'].get('SII:RESP_BODY') and resp['SII:RESPUESTA']['SII:RESP_BODY']['RECHAZADOS'] == "1":
@@ -256,4 +253,4 @@ class SIIXMLEnvio(models.Model):
         elif resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] in ["RCT", "RFR", "LRH", "RCH", "RSC", "FNA"]:
             result.update({ "state": "Rechazado" })
             _logger.warning(resp)
-        self.write( result )
+        self.write(result)

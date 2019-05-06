@@ -1207,9 +1207,7 @@ version="1.0">
         signature_id = user_id.get_digital_signature(self.company_id)
         if not signature_id:
             raise UserError(_('''There are not a Signature Cert Available for this user, please upload your signature or tell to someelse.'''))
-        sig_root = signature_id.firmar(message, uri, type)
-        msg = etree.tostring(sig_root)
-        return msg if self.xml_validator(msg, type) else ''
+        return signature_id.firmar(message, uri, type)
 
     def crear_intercambio(self):
         rut = self.format_vat(self.partner_id.commercial_partner_id.vat )
@@ -1326,7 +1324,7 @@ version="1.0">
         ids = []
         envio_boleta = False
         for inv in self.with_context(lang='es_CL'):
-            if inv.sii_result in ['','NoEnviado','Rechazado'] or inv.company_id.dte_service_provider == 'SIICERT':
+            if inv.sii_result in ['', 'NoEnviado', 'Rechazado'] or inv.company_id.dte_service_provider == 'SIICERT':
                 if inv.sii_result in ['Rechazado']:
                     inv._timbrar()
                     if len(inv.sii_xml_request) == 1:
@@ -1757,8 +1755,8 @@ version="1.0">
             if dr.gdr_type == "amount":
                 disc_type = "$"
             dr_line['TpoValor'] = disc_type
-            currency_base = self.env.ref('base.CLP')
-            dr_line['ValorDR'] = currency_base.round(dr.valor).with_context(date=self.date_invoice)
+            currency_base = self.env.ref('base.CLP').with_context(date=self.date_invoice)
+            dr_line['ValorDR'] = currency_base.round(dr.valor)
             if self.currency_id != currency_base:
                 currency_id = self.currency_id
                 dr_line['ValorDROtrMnda'] = currency_base.compute(dr.valor, currency_id)
@@ -1926,7 +1924,7 @@ version="1.0">
                 env,
             )
         return {
-                'xml_envio': '<?xml version="1.0" encoding="ISO-8859-1"?>\n' + envio_dte.decode('ISO-8859-1'),
+                'xml_envio': '<?xml version="1.0" encoding="ISO-8859-1"?>\n' + envio_dte,
                 'name': file_name,
                 'company_id': company_id.id,
                 'user_id': self.env.uid,

@@ -1005,8 +1005,6 @@ version="1.0">
         signature_id = self.env.user.get_digital_signature(self.company_id)
         if not signature_id:
             raise UserError(_('''There are not a Signature Cert Available for this user, pleaseupload your signature or tell to someelse.'''))
-        certp = signature_id.cert.replace(
-            BC, '').replace(EC, '').replace('\n', '')
         resumenes = []
         resumenesPeriodo = {}
         for rec in self.with_context(lang='es_CL').move_ids:
@@ -1102,8 +1100,6 @@ version="1.0">
                 .replace('_no_rec','')
         envio_dte = self.sign_full_xml(
             xml_pret,
-            signature_id.priv_key,
-            certp,
             doc_id,
             env)
         self.sii_xml_request = self.env['sii.xml.envio'].create({

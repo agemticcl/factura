@@ -70,10 +70,6 @@ claim_url = {
     'SII': 'https://ws1.sii.cl/WSREGISTRORECLAMODTE/registroreclamodteservice',
 }
 
-# hardcodeamos este valor por ahora
-import os, sys
-xsdpath = os.path.dirname(os.path.realpath(__file__)).replace('/models','/static/xsd/')
-
 TYPE2JOURNAL = {
     'out_invoice': 'sale',
     'in_invoice': 'purchase',
@@ -1144,37 +1140,6 @@ a VAT."""))
     def time_stamp(self, formato='%Y-%m-%dT%H:%M:%S'):
         tz = pytz.timezone('America/Santiago')
         return datetime.now(tz).strftime(formato)
-
-    def _get_xsd_types(self):
-        return {
-          'doc': 'DTE_v10.xsd',
-          'env': 'EnvioDTE_v10.xsd',
-          'env_boleta': 'EnvioBOLETA_v11.xsd',
-          'recep' : 'Recibos_v10.xsd',
-          'env_recep' : 'EnvioRecibos_v10.xsd',
-          'env_resp': 'RespuestaEnvioDTE_v10.xsd',
-          'sig': 'xmldsignature_v10.xsd'
-        }
-
-    def _get_xsd_file(self, validacion, path=False):
-        validacion_type = self._get_xsd_types()
-        return (path or xsdpath) + validacion_type[validacion]
-
-    def xml_validator(self, some_xml_string, validacion='doc'):
-        if validacion == 'bol':
-            return True
-        xsd_file = self._get_xsd_file(validacion)
-        try:
-            xmlschema_doc = etree.parse(xsd_file)
-            xmlschema = etree.XMLSchema(xmlschema_doc)
-            xml_doc = etree.fromstring(some_xml_string)
-            result = xmlschema.validate(xml_doc)
-            if not result:
-                xmlschema.assert_(xml_doc)
-            return result
-        except AssertionError as e:
-            _logger.warning(etree.tostring(xml_doc))
-            raise UserError(_('XML Malformed Error:  %s') % e.args)
 
     def create_template_doc(self, doc):
         xml = '''<DTE xmlns="http://www.sii.cl/SiiDte" version="1.0">

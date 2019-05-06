@@ -39,10 +39,6 @@ except ImportError:
     _logger.info('Cannot import base64 library')
 server_url = {'SIICERT': 'https://maullin.sii.cl/DTEWS/', 'SII': 'https://palena.sii.cl/DTEWS/'}
 
-# hardcodeamos este valor por ahora
-import os, sys
-xsdpath = os.path.dirname(os.path.realpath(__file__)).replace('/models','/static/xsd/')
-
 connection_status = {
     '0': 'Upload OK',
     '1': 'El Sender no tiene permiso para enviar',
@@ -362,23 +358,6 @@ class ConsumoFolios(models.Model):
         tz = pytz.timezone('America/Santiago')
         return datetime.now(tz).strftime(formato)
 
-    def xml_validator(self, some_xml_string, validacion='doc'):
-        validacion_type = {
-            'consu': 'ConsumoFolio_v10.xsd',
-            'sig': 'xmldsignature_v10.xsd',
-        }
-        xsd_file = xsdpath+validacion_type[validacion]
-        try:
-            xmlschema_doc = etree.parse(xsd_file)
-            xmlschema = etree.XMLSchema(xmlschema_doc)
-            xml_doc = etree.fromstring(some_xml_string)
-            result = xmlschema.validate(xml_doc)
-            if not result:
-                xmlschema.assert_(xml_doc)
-            return result
-        except AssertionError as e:
-            raise UserError(_('XML Malformed Error:  %s') % e.args)
-
     def get_seed(self, company_id):
         return self.env['account.move.book'].get_seed( company_id )
 
@@ -399,15 +378,6 @@ version="1.0">
 
     def get_token(self, seed_file, company_id):
         return self.env['account.move.book'].get_token(seed_file, company_id)
-
-    def sign_full_xml(self, message, uri, type='consu'):
-        user_id = self.env.user
-        signature_id = user_id.get_digital_signature(self.company_id)
-        if not signature_id:
-            raise UserError(_('''There are not a Signature Cert Available for this user, please upload your signature or tell to someelse.'''))
-        sig_root = signature_id.firmar(message, uri, type)
-        msg = etree.tostring(sig_root)
-        return msg if self.xml_validator(msg, type) else ''
 
     def get_resolution_data(self, comp_id):
         resolution_data = {
@@ -759,7 +729,7 @@ version="1.0">
                 .replace('<itemAnulados>','').replace('</itemAnulados>','\n')
         for TpoDoc in TpoDocs:
         	xml_pret = xml_pret.replace('<key name="'+str(TpoDoc)+'_folios">','').replace('</key>','\n').replace('<key name="'+str(TpoDoc)+'_folios"/>','\n')
-        envio_dte = self.sign_full_xml(
+        envio_dte = self.env['account.invoice'].sign_full_xml(
             xml_pret,
             doc_id,
             'consu')

@@ -229,6 +229,20 @@ class Libro(models.Model):
     codigo_rectificacion = fields.Char(
             string="Código de Rectificación",
         )
+    sii_result = fields.Selection(
+            [
+                ('draft', 'Borrador'),
+                ('NoEnviado', 'No Enviado'),
+                ('Enviado', 'Enviado'),
+                ('Aceptado', 'Aceptado'),
+                ('Rechazado', 'Rechazado'),
+                ('Reparo', 'Reparo'),
+                ('Proceso', 'Proceso'),
+                ('Reenviar', 'Reenviar'),
+                ('Anulado', 'Anulado')
+            ],
+            related="state",
+        )
 
     @api.onchange('periodo_tributario', 'tipo_operacion', 'company_id')
     def set_movimientos(self):

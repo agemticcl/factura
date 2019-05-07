@@ -222,6 +222,7 @@ class SIIXMLEnvio(models.Model):
     def get_send_status(self, user_id=False):
         if not self.sii_send_ident:
             self.state = "NoEnviado"
+            return
         user_id = user_id or self.user_id
         token = self.get_token(user_id, self.company_id)
         url = server_url[self.company_id.dte_service_provider] + 'QueryEstUp.jws?WSDL'

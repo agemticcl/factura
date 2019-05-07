@@ -1603,7 +1603,7 @@ version="1.0">
         signature_id = self.env.user.get_digital_signature(self.company_id)
         if not signature_id:
             raise UserError(_('''There are not a Signature Cert Available for this user, please upload your signature or tell to someelse.'''))
-        frmt = signature_id.generar_firma(ddxml)
+        frmt = signature_id.generar_firma(ddxml, privkey=keypriv)
         ted = (
             '''<TED version="1.0">{}<FRMT algoritmo="SHA1withRSA">{}\
 </FRMT></TED>''').format(ddxml.decode(), frmt)

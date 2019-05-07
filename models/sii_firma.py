@@ -191,9 +191,11 @@ class SignatureCert(models.Model):
             })
         return firma.firmar(string=string, uri=uri, type=type)
 
-    def generar_firma(self, ddxml):
+    def generar_firma(self, ddxml, privkey=False):
+        if not privkey:
+            privkey = self.priv_key
         firma = Firma({
-                'priv_key': self.priv_key,
+                'priv_key': privkey,
                 'cert': self.cert,
                 'rut_firmante': self.subject_serial_number,
                 'init_signature': False

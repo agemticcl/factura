@@ -673,24 +673,24 @@ class AccountInvoice(models.Model):
     @api.model
     def _prepare_refund(self, invoice, date_invoice=None, date=None, description=None, journal_id=None, tipo_nota=61, mode='1'):
         values = super(AccountInvoice, self)._prepare_refund(invoice, date_invoice, date, description, journal_id)
-        document_type = self.env['account.journal.sii_document_class'].search(
+        jdc = self.env['account.journal.sii_document_class'].search(
                 [
                     ('sii_document_class_id.sii_code','=', tipo_nota),
                     ('journal_id','=', invoice.journal_id.id),
                 ],
                 limit=1,
             )
-        if invoice.type == 'out_invoice':
+        if invoice.type == 'out_invoice' and jdc.sii_document_class_id.document_type == 'credit_note':
             type = 'out_refund'
-        elif invoice.type == 'out_refund':
+        elif invoice.type in ['out_refund', 'out_invoice']:
             type = 'out_invoice'
-        elif invoice.type == 'in_invoice':
+        elif invoice.type == 'in_invoice' and jdc.sii_document_class_id.document_type == 'credit_note':
             type = 'in_refund'
-        elif invoice.type == 'in_refund':
+        elif invoice.type in ['in_refund', 'in_invoice']:
             type = 'in_invoice'
         values.update({
                 'type': type,
-                'journal_document_class_id': document_type.id,
+                'journal_document_class_id': jdc.id,
                 'referencias':[[0,0, {
                         'origen': int(invoice.sii_document_number or invoice.reference),
                         'sii_referencia_TpoDocRef': invoice.document_class_id.id,

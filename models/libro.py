@@ -472,11 +472,11 @@ version="1.0">
 
     def sign_full_xml(self, message, uri, type='libro'):
         envio_dte = self.env['account.invoice'].sign_full_xml(message, uri, type)
-        if type != 'libro_boleta':
+        if type == 'libro_boleta':
             xmlns = 'xmlns="http://www.w3.org/2000/09/xmldsig#"'
             xmlns_sii = 'xmlns="http://www.sii.cl/SiiDte"'
-            msg = msg.replace(xmlns, xmlns_sii)
-        return  '<?xml version="1.0" encoding="ISO-8859-1"?>\n%s' % msg
+            envio_dte = envio_dte.replace(xmlns, xmlns_sii)
+        return  '<?xml version="1.0" encoding="ISO-8859-1"?>\n%s' % envio_dte
 
     def get_resolution_data(self, comp_id):
         resolution_data = {

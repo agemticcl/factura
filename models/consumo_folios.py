@@ -8,22 +8,8 @@ from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT as DTF
 import logging
 from lxml import etree
 from lxml.etree import Element, SubElement
-
 import pytz
 import collections
-
-try:
-    from suds.client import Client
-except:
-    pass
-try:
-    import urllib3
-except:
-    pass
-
-#urllib3.disable_warnings()
-pool = urllib3.PoolManager(timeout=30)
-_logger = logging.getLogger(__name__)
 try:
     import xmltodict
 except ImportError:
@@ -33,24 +19,6 @@ try:
     dicttoxml.set_debug(False)
 except ImportError:
     _logger.info('Cannot import dicttoxml library')
-try:
-    import base64
-except ImportError:
-    _logger.info('Cannot import base64 library')
-server_url = {'SIICERT': 'https://maullin.sii.cl/DTEWS/', 'SII': 'https://palena.sii.cl/DTEWS/'}
-
-connection_status = {
-    '0': 'Upload OK',
-    '1': 'El Sender no tiene permiso para enviar',
-    '2': 'Error en tamaño del archivo (muy grande o muy chico)',
-    '3': 'Archivo cortado (tamaño <> al parámetro size)',
-    '5': 'No está autenticado',
-    '6': 'Empresa no autorizada a enviar archivos',
-    '7': 'Esquema Invalido',
-    '8': 'Firma del Documento',
-    '9': 'Sistema Bloqueado',
-    'Otro': 'Error Interno.',
-}
 
 
 class ConsumoFolios(models.Model):
@@ -319,16 +287,10 @@ class ConsumoFolios(models.Model):
 
     @api.multi
     def unlink(self):
-        for libro in self:
-            if libro.state not in ('draft', 'cancel'):
-                raise UserError(_('You cannot delete a Validated book.'))
+        for cf in self:
+            if cf.state not in ('draft', 'cancel'):
+                raise UserError(_('You cannot delete a Validated Consumo de Folios.'))
         return super(ConsumoFolios, self).unlink()
-
-    def split_cert(self, cert):
-        certf, j = '', 0
-        for i in range(0, 29):
-            certf += cert[76 * i:76 * (i + 1)] + '\n'
-        return certf
 
     def create_template_envio(self, RutEmisor, FchResol, NroResol, FchInicio,\
                                FchFinal, Correlativo, SecEnvio, EnvioDTE,\
@@ -358,12 +320,6 @@ class ConsumoFolios(models.Model):
         tz = pytz.timezone('America/Santiago')
         return datetime.now(tz).strftime(formato)
 
-    def get_seed(self, company_id):
-        return self.env['account.move.book'].get_seed( company_id )
-
-    def create_template_seed(self, seed):
-        return self.env['account.move.book'].create_template_seed(seed)
-
     def create_template_env(self, doc,simplificado=False):
         xsd = 'http://www.sii.cl/SiiDte ConsumoFolio_v10.xsd'
         xml = '''<ConsumoFolios xmlns="http://www.sii.cl/SiiDte" \
@@ -372,12 +328,6 @@ xsi:schemaLocation="{0}" \
 version="1.0">
 {1}</ConsumoFolios>'''.format(xsd, doc)
         return xml
-
-    def sign_seed(self, message, privkey, cert):
-        return self.env['account.move.book'].sign_seed(message, privkey, cert)
-
-    def get_token(self, seed_file, company_id):
-        return self.env['account.move.book'].get_token(seed_file, company_id)
 
     def get_resolution_data(self, comp_id):
         resolution_data = {

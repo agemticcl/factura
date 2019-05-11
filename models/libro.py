@@ -8,22 +8,8 @@ from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT as DTF
 import logging
 from lxml import etree
 from lxml.etree import Element, SubElement
-
 import pytz
-import struct
-
 import collections
-try:
-    from suds.client import Client
-except:
-    pass
-try:
-    import urllib3
-except:
-    pass
-#urllib3.disable_warnings()
-pool = urllib3.PoolManager(timeout=30)
-_logger = logging.getLogger(__name__)
 try:
     import xmltodict
 except ImportError:
@@ -35,25 +21,6 @@ try:
 except ImportError:
     _logger.info('Cannot import dicttoxml library')
 
-try:
-    import base64
-except ImportError:
-    _logger.info('Cannot import base64 library')
-
-server_url = {'SIICERT':'https://maullin.sii.cl/DTEWS/','SII':'https://palena.sii.cl/DTEWS/'}
-
-connection_status = {
-    '0': 'Upload OK',
-    '1': 'El Sender no tiene permiso para enviar',
-    '2': 'Error en tamaño del archivo (muy grande o muy chico)',
-    '3': 'Archivo cortado (tamaño <> al parámetro size)',
-    '5': 'No está autenticado',
-    '6': 'Empresa no autorizada a enviar archivos',
-    '7': 'Esquema Invalido',
-    '8': 'Firma del Documento',
-    '9': 'Sistema Bloqueado',
-    'Otro': 'Error Interno.',
-}
 
 allowed_docs = [29, 30, 32, 33, 34, 35, 38, 39, 40,
                 41, 43, 45, 46, 48, 53, 55, 56, 60,
@@ -375,12 +342,6 @@ class Libro(models.Model):
                 raise UserError(_('You cannot delete a Validated book.'))
         return super(Libro, self).unlink()
 
-    def split_cert(self, cert):
-        certf, j = '', 0
-        for i in range(0, 29):
-            certf += cert[76 * i:76 * (i + 1)] + '\n'
-        return certf
-
     def create_template_envio(self, RutEmisor, PeriodoTributario, FchResol,\
                               NroResol, EnvioDTE, subject_serial_number,\
                               TipoOperacion='VENTA',TipoLibro='MENSUAL',\
@@ -431,9 +392,6 @@ class Libro(models.Model):
         tz = pytz.timezone('America/Santiago')
         return datetime.now(tz).strftime(formato)
 
-    def get_seed(self, company_id):
-        return self.env['account.invoice'].get_seed(company_id)
-
     def create_template_env(self, doc,simplificado=False):
         simp = 'http://www.sii.cl/SiiDte LibroCV_v10.xsd'
         if simplificado:
@@ -453,22 +411,6 @@ xsi:schemaLocation="{0}" \
 version="1.0">
 {1}</LibroBoleta>'''.format(xsd, doc)
         return xml
-
-    def sign_seed(self, message, privkey, cert):
-        return self.env['account.invoice'].sign_seed(message, privkey, cert)
-
-    def get_token(self, seed_file, company_id):
-        return self.env['account.invoice'].get_token(seed_file, company_id)
-
-    def create_template_seed(self, seed):
-        return self.env['account.invoice'].create_template_seed(seed)
-
-    def ensure_str(self,x, encoding="utf-8", none_ok=False):
-        if none_ok is True and x is None:
-            return x
-        if not isinstance(x, str):
-            x = x.decode(encoding)
-        return x
 
     def sign_full_xml(self, message, uri, type='libro'):
         envio_dte = self.env['account.invoice'].sign_full_xml(message, uri, type)

@@ -180,7 +180,7 @@ class SignatureCert(models.Model):
             'cert': crypto.dump_certificate(type_, p12.get_certificate()),
             'password': False,
         })
-        self.check_signature()
+        self.set_state()
 
     def firmar(self, string, uri=False, type="doc"):
         firma = Firma({

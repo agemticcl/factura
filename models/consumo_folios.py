@@ -535,9 +535,7 @@ version="1.0">
         resumenP[str(resumen['TpoDoc'])+'_folios'] = self._rangosU(resumen, resumenP[str(resumen['TpoDoc'])+'_folios'], continuado)
         return resumenP
 
-    def _get_resumenes(self, marc=False):
-        resumenes = collections.OrderedDict()
-        TpoDocs = []
+    def _get_moves(self):
         recs = []
         for rec in self.with_context(lang='es_CL').move_ids:
             document_class_id = rec.document_class_id
@@ -546,24 +544,12 @@ version="1.0">
                 continue
             if rec.sii_document_number:
                 recs.append(rec)
-            #rec.sended = marc
-        if 'pos.order' in self.env: # @TODO mejor forma de verificar si está instalado módulo POS
-            current = self.fecha_inicio + ' 00:00:00'
-            tz = pytz.timezone('America/Santiago')
-            tz_current = tz.localize(datetime.strptime(current, DTF)).astimezone(pytz.utc)
-            current = tz_current.strftime(DTF)
-            next_day = (tz_current + relativedelta.relativedelta(days=1)).strftime(DTF)
-            orders_array = self.env['pos.order'].search(
-                [
-                 ('invoice_id' , '=', False),
-                 ('sii_document_number', 'not in', [False, '0']),
-                 ('document_class_id.sii_code', 'in', [39, 41, 61]),
-                 ('date_order','>=', current),
-                 ('date_order','<', next_day),
-                ]
-            ).with_context(lang='es_CL')
-            for order in orders_array:
-                recs.append(order)
+        return recs
+
+    def _get_resumenes(self, marc=False):
+        resumenes = collections.OrderedDict()
+        TpoDocs = []
+        recs = self._get_moves()
         if recs:
             recs = sorted(recs, key=lambda t: int(t.sii_document_number))
             ant = {}
@@ -624,7 +610,7 @@ version="1.0">
         signature, for you or make the signer to authorize you to use his \
         signature.'''))
         resumenes, TpoDocs = self._get_resumenes(marc=True)
-        Resumen=[]
+        Resumen = []
         listado = [ 'TipoDocumento', 'MntNeto', 'MntIva', 'TasaIVA', 'MntExento', 'MntTotal', 'FoliosEmitidos',  'FoliosAnulados', 'FoliosUtilizados', 'itemUtilizados' ]
         xml = '<Resumen><TipoDocumento>39</TipoDocumento><MntTotal>0</MntTotal><FoliosEmitidos>0</FoliosEmitidos><FoliosAnulados>0</FoliosAnulados><FoliosUtilizados>0</FoliosUtilizados></Resumen>'
         if resumenes:

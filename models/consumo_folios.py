@@ -262,6 +262,13 @@ class ConsumoFolios(models.Model):
 
     @api.onchange('fecha_inicio', 'company_id', 'fecha_final')
     def set_data(self):
+        current = datetime.now().strftime('%Y-%m-%d') + ' 00:00:00'
+        tz = pytz.timezone('America/Santiago')
+        tz_current = tz.localize(datetime.strptime(current, DTF)).astimezone(pytz.utc)
+        current = tz_current.strftime(DTF)
+        fi = datetime.strptime(self.fecha_inicio + " 00:00:00", DTF)
+        if fi > current:
+            raise UserError("No puede hacer Consumo de Folios de días futuros")
         self.name = self.fecha_inicio
         self.fecha_final = self.fecha_inicio
         self.move_ids = self.env['account.move'].search([

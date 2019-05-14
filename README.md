@@ -6,6 +6,7 @@ Se crea este repositorio, para dar un enfoque de firma electrónica directa con 
  - obtener módulo de exportación xlsx "Base report xlsx" desde https://github.com/OCA/reporting-engine
  - Se integra la consulta de datos de empresas al repositorio https://sre.cl, para permitir obtener datos digitando el rut
  - Al instalar este módulo acepta que por defecto estará activa la sincronización de datos de partners al repositorio https://sre.cl, sin embargo puede desactivarlo en todo momento desde el panel de configuración general.
+ - Integración con https://apicaf.cl , Api que permite emitir folios vía api, sin pasar por la página del SII. El uso y condiciones de la api es según políticas expuestas en el sitio web mismo de la api.
 
  Estado:
  - - Factura Electrónica (FAC 33, FNA 34): Ok envío, Ok muestra impresa, Ok Certificación

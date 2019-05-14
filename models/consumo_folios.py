@@ -386,6 +386,33 @@ version="1.0">
             return True
         return False
 
+    def _get_totales(self, rec):
+        Neto = 0
+        MntExe = 0
+        TaxMnt = 0
+        MntTotal = 0
+        for l in rec.line_ids:
+            if l.tax_line_id:
+                if l.tax_line_id and l.tax_line_id.amount > 0: #supuesto iva único
+                    if self._es_iva(l.tax_line_id): # diferentes tipos de IVA retenidos o no
+                        if l.credit > 0:
+                            TaxMnt += l.credit
+                        else:
+                            TaxMnt += l.debit
+            elif l.tax_ids and l.tax_ids[0].amount > 0:
+                if l.credit > 0:
+                    Neto += l.credit
+                else:
+                    Neto += l.debit
+            elif l.tax_ids and l.tax_ids[0].amount == 0: #caso monto exento
+                if l.credit > 0:
+                    MntExe += l.credit
+                else:
+                    MntExe += l.debit
+        TasaIVA = self.env['account.move.line'].search([('move_id', '=', rec.id), ('tax_line_id.amount', '>', 0)], limit=1).tax_line_id.amount
+        MntTotal = Neto + MntExe + TaxMnt
+        return Neto, MntExe, TaxMnt, MntTotal
+
     def getResumen(self, rec):
         det = collections.OrderedDict()
         det['TpoDoc'] = rec.document_class_id.sii_code
@@ -396,41 +423,7 @@ version="1.0">
         if rec.canceled:
             det['Anulado'] = 'A'
             return det
-        Neto = 0
-        MntExe = 0
-        TaxMnt = 0
-        MntTotal = 0
-        if 'lines' in rec:
-            # NC pasar a positivo
-            TaxMnt =  rec.amount_tax if rec.amount_tax > 0 else rec.amount_tax * -1
-            MntTotal = rec.amount_total if rec.amount_total > 0 else rec.amount_total * -1
-            Neto = rec.pricelist_id.currency_id.round(sum(line.price_subtotal for line in rec.lines))
-            if Neto < 0:
-                Neto *= -1
-            MntExe = rec.exento()
-            TasaIVA = self.env['pos.order.line'].search([('order_id', '=', rec.id), ('tax_ids.amount', '>', 0)], limit=1).tax_ids.amount
-            Neto -= MntExe
-        else:  # si la boleta fue hecha por contabilidad
-            for l in rec.line_ids:
-                if l.tax_line_id:
-                    if l.tax_line_id and l.tax_line_id.amount > 0: #supuesto iva único
-                        if self._es_iva(l.tax_line_id): # diferentes tipos de IVA retenidos o no
-                            if l.credit > 0:
-                                TaxMnt += l.credit
-                            else:
-                                TaxMnt += l.debit
-                elif l.tax_ids and l.tax_ids[0].amount > 0:
-                    if l.credit > 0:
-                        Neto += l.credit
-                    else:
-                        Neto += l.debit
-                elif l.tax_ids and l.tax_ids[0].amount == 0: #caso monto exento
-                    if l.credit > 0:
-                        MntExe += l.credit
-                    else:
-                        MntExe += l.debit
-            TasaIVA = self.env['account.move.line'].search([('move_id', '=', rec.id), ('tax_line_id.amount', '>', 0)], limit=1).tax_line_id.amount
-            MntTotal = Neto + MntExe + TaxMnt
+        Neto, MntExe, TaxMnt, MntTotal = self._get_totales(rec)
         if MntExe > 0 :
             det['MntExe'] = self.currency_id.round(MntExe)
         if TaxMnt > 0:

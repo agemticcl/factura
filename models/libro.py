@@ -652,33 +652,16 @@ version="1.0">
             return True
         return False
 
-    def getResumenBoleta(self, rec):
-        det = collections.OrderedDict()
-        det['TpoDoc'] = rec.document_class_id.sii_code
-        det['FolioDoc'] = int(rec.sii_document_number)
-        #if self.env['account.invoice.referencias'].search(
-        #        [('origen', '=', det['FolioDoc']),
-        #         ('sii_referencia_TpoDocRef', '=', rec.document_class_id.id),
-        #         ('sii_referencia_CodRef', '=', '1')
-        #        ]) or  \
-        #    (rec.document_class_id.sii_code in [39, 41] and
-        #     self.env['pos.order.referencias'].search([
-        #         ('origen', '=', det['FolioDoc']),
-        #         ('sii_referencia_TpoDocRef', '=', rec.document_class_id.id),
-        #         ('sii_referencia_CodRef', '=', '1')
-        #        ])
-        #    ):
-        #    det['Anulado'] = 'A'
-        det['TpoServ'] = 3
-        det['FchEmiDoc'] = rec.date
-        det['FchVencDoc'] = rec.date
-        #det['PeriodoDesde']
-        #det['PeriodoHasta']
-        #det['CdgSIISucur']
+    def _get_date(self, rec):
+        return {
+            'FchEmiDoc': rec.date,
+            'FchVencDoc': rec.date
+        }
+
+    def _get_datos(self, rec):
         Neto = 0
         MntExe = 0
         TaxMnt = 0
-        MntTotal = 0
         for l in rec.line_ids:
             if l.tax_line_id:
                 if l.tax_line_id and l.tax_line_id.amount > 0: #supuesto iva único
@@ -698,6 +681,32 @@ version="1.0">
                 else:
                     MntExe += l.debit
         TasaIVA = self.env['account.move.line'].search([('move_id', '=', rec.id), ('tax_line_id.amount', '>', 0)], limit=1).tax_line_id.amount
+        return Neto, MntExe, TaxMnt, TasaIVA
+
+    def _get_resumen_boleta(self, rec):
+        det = collections.OrderedDict()
+        det['TpoDoc'] = rec.document_class_id.sii_code
+        det['FolioDoc'] = int(rec.sii_document_number)
+        #if self.env['account.invoice.referencias'].search(
+        #        [('origen', '=', det['FolioDoc']),
+        #         ('sii_referencia_TpoDocRef', '=', rec.document_class_id.id),
+        #         ('sii_referencia_CodRef', '=', '1')
+        #        ]) or  \
+        #    (rec.document_class_id.sii_code in [39, 41] and
+        #     self.env['pos.order.referencias'].search([
+        #         ('origen', '=', det['FolioDoc']),
+        #         ('sii_referencia_TpoDocRef', '=', rec.document_class_id.id),
+        #         ('sii_referencia_CodRef', '=', '1')
+        #        ])
+        #    ):
+        #    det['Anulado'] = 'A'
+        det['TpoServ'] = 3
+        det.update(self._get_date(rec))
+        #det['PeriodoDesde']
+        #det['PeriodoHasta']
+        #det['CdgSIISucur']
+        MntTotal = 0
+        Neto, MntExe, TaxMnt, TasaIVA = self._get_datos(rec)
         MntTotal = Neto + MntExe + TaxMnt
         det['RUTCliente'] = self.format_vat(rec.partner_id.vat)
         if MntExe > 0 :
@@ -899,6 +908,17 @@ version="1.0">
             resumenP['TotalesServicio']['TotMntTotal'] += resumen['MntTotal']
         return resumenP
 
+    def _get_moves(self):
+        recs = []
+        for rec in self.with_context(lang='es_CL').move_ids:
+            rec.sended = True
+            document_class_id = rec.document_class_id
+            if not document_class_id or document_class_id.sii_code in [39, 41]:
+                continue
+            if rec.sii_document_number:
+                recs.append(rec)
+        return recs
+
     def _validar(self):
         dicttoxml.set_debug(False)
         company_id = self.company_id
@@ -907,13 +927,13 @@ version="1.0">
             raise UserError(_('''There are not a Signature Cert Available for this user, pleaseupload your signature or tell to someelse.'''))
         resumenes = []
         resumenesPeriodo = {}
-        for rec in self.with_context(lang='es_CL').move_ids:
-            rec.sended = True
+        recs = self._get_moves()
+        for rec in recs:
             TpoDoc = rec.document_class_id.sii_code
             if TpoDoc not in resumenesPeriodo:
                 resumenesPeriodo[TpoDoc] = {}
-            if self.tipo_operacion == 'BOLETA' and rec.document_class_id:
-                resumen = self.getResumenBoleta(rec)
+            if self.tipo_operacion == 'BOLETA':
+                resumen += self._get_resumen_boleta(rec)
                 resumenesPeriodo[TpoDoc] = self._setResumenPeriodoBoleta(resumen, resumenesPeriodo[TpoDoc])
                 del(resumen['MntNeto'])
                 del(resumen['MntIVA'])
@@ -923,7 +943,6 @@ version="1.0">
             else:
                 resumen = self.getResumen(rec)
                 resumenes.extend([{'Detalle': resumen}])
-            if self.tipo_operacion != 'BOLETA':
                 resumenesPeriodo[TpoDoc] = self._setResumenPeriodo(resumen, resumenesPeriodo[TpoDoc])
         if self.boletas:#no es el libro de boletas especial
             for boletas in self.boletas:

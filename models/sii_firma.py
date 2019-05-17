@@ -50,7 +50,8 @@ class SignatureCert(models.Model):
             rut = self.subject_serial_number.replace('.', '').upper()
             if not self.env.user.partner_id.check_vat_cl(rut.replace('-', '')):
                 raise UserError(_('Not Valid Subject Serial Number'))
-            self.subject_serial_number = rut
+            self.write({'subject_serial_number': rut})
+            self.state = 'valid'
             self.check_signature()
         elif self.file_content:
             self.state = 'incomplete'

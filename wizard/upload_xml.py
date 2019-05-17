@@ -151,7 +151,7 @@ class UploadXMLWizard(models.TransientModel):
         string = etree.tostring(xml[0])
         mess = etree.tostring(etree.fromstring(string), method="c14n")
         inv_obj = self.env['account.invoice']
-        our = base64.b64encode(inv_obj.digest(mess))
+        #our = base64.b64encode(inv_obj.digest(mess))
         #if our != xml.find("{http://www.w3.org/2000/09/xmldsig#}Signature/{http://www.w3.org/2000/09/xmldsig#}SignedInfo/{http://www.w3.org/2000/09/xmldsig#}Reference/{http://www.w3.org/2000/09/xmldsig#}DigestValue").text:
         #    return 2, 'Envio Rechazado - Error de Firma'
         return 0, 'Envio Ok'
@@ -162,10 +162,10 @@ class UploadXMLWizard(models.TransientModel):
         for e in envio.findall("DTE"):
             string = etree.tostring(e.find("Documento"))#doc
             mess = etree.tostring(etree.fromstring(string), method="c14n").decode('iso-8859-1').replace(' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"','').encode('iso-8859-1')# el replace es necesario debido a que python lo agrega solo
-            our = base64.b64encode(self.env['account.invoice'].digest(mess))
-            their = e.find("{http://www.w3.org/2000/09/xmldsig#}Signature/{http://www.w3.org/2000/09/xmldsig#}SignedInfo/{http://www.w3.org/2000/09/xmldsig#}Reference/{http://www.w3.org/2000/09/xmldsig#}DigestValue").text
-            if our != their:
-                _logger.warning('DTE No Recibido - Error de Firma: our = %s their=%s' % (our, their))
+            #our = base64.b64encode(self.env['account.invoice'].digest(mess))
+            #their = e.find("{http://www.w3.org/2000/09/xmldsig#}Signature/{http://www.w3.org/2000/09/xmldsig#}SignedInfo/{http://www.w3.org/2000/09/xmldsig#}Reference/{http://www.w3.org/2000/09/xmldsig#}DigestValue").text
+            #if our != their:
+            #    _logger.warning('DTE No Recibido - Error de Firma: our = %s their=%s' % (our, their))
                 #return 1, 'DTE No Recibido - Error de Firma'
         return 0, 'DTE Recibido OK'
 

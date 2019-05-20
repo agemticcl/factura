@@ -267,7 +267,7 @@ class ConsumoFolios(models.Model):
         tz_current = tz.localize(datetime.strptime(current, DTF)).astimezone(pytz.utc)
         current = tz_current.strftime(DTF)
         fi = datetime.strptime(self.fecha_inicio + " 00:00:00", DTF)
-        if fi > current:
+        if fi > datetime.strptime(current, DTF):
             raise UserError("No puede hacer Consumo de Folios de días futuros")
         self.name = self.fecha_inicio
         self.fecha_final = self.fecha_inicio

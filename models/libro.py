@@ -297,14 +297,13 @@ class Libro(models.Model):
     def _get_imps(self):
         imp = {}
         for move in self.move_ids:
-            if move.document_class_id.sii_code not in [35, 38, 39, 41, False, 0]:
-                move_imps = move._get_move_imps()
-                for key, i in move_imps.items():
-                    if not key in imp:
-                        imp[key] = i
-                    else:
-                        imp[key]['credit'] += i['credit']
-                        imp[key]['debit'] += i['debit']
+            move_imps = move._get_move_imps()
+            for key, i in move_imps.items():
+                if not key in imp:
+                    imp[key] = i
+                else:
+                    imp[key]['credit'] += i['credit']
+                    imp[key]['debit'] += i['debit']
         return imp
 
     @api.onchange('move_ids')
@@ -913,10 +912,10 @@ version="1.0">
         for rec in self.with_context(lang='es_CL').move_ids:
             rec.sended = True
             document_class_id = rec.document_class_id
-            if not document_class_id or document_class_id.sii_code in [39, 41]:
+            if not document_class_id or document_class_id.sii_code in [39, 41]\
+                or rec.sii_document_number in [False, 0]:
                 continue
-            if rec.sii_document_number:
-                recs.append(rec)
+            recs.append(rec)
         return recs
 
     def _validar(self):

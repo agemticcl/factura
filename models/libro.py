@@ -5,11 +5,12 @@ from odoo.exceptions import UserError
 from datetime import datetime, timedelta
 import dateutil.relativedelta as relativedelta
 from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT as DTF
-import logging
 from lxml import etree
 from lxml.etree import Element, SubElement
 import pytz
 import collections
+import logging
+_logger = logging.getLogger(__name__)
 try:
     import xmltodict
 except ImportError:
@@ -257,7 +258,6 @@ class Libro(models.Model):
                 lines = [[5, ], ]
                 for tpo_doc, det in lineas.items():
                     tax_id = self.env['account.tax'].search([('sii_code', '=', 14), ('type_tax_use', '=', 'sale'), ('company_id', '=', self.company_id.id)], limit=1) if tpo_doc.sii_code == 39 else self.env['account.tax'].search([('sii_code', '=', 0), ('type_tax_use', '=', 'sale'), ('company_id', '=', self.company_id.id)], limit=1)
-                    _logger.warning('tax_d %s' %tax_id)
                     line = {
                         'currency_id': self.env.user.company_id.currency_id,
                         'tipo_boleta': tpo_doc.id,
@@ -933,7 +933,7 @@ version="1.0">
             if TpoDoc not in resumenesPeriodo:
                 resumenesPeriodo[TpoDoc] = {}
             if self.tipo_operacion == 'BOLETA':
-                resumen += self._get_resumen_boleta(rec)
+                resumen = self._get_resumen_boleta(rec)
                 resumenesPeriodo[TpoDoc] = self._setResumenPeriodoBoleta(resumen, resumenesPeriodo[TpoDoc])
                 del(resumen['MntNeto'])
                 del(resumen['MntIVA'])

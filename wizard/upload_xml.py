@@ -4,6 +4,7 @@ from odoo.tools.translate import _
 from odoo.exceptions import UserError
 import logging
 import base64
+from facturacion_electronica import clase_util as cu
 import xmltodict
 from lxml import etree
 import collections
@@ -171,7 +172,7 @@ class UploadXMLWizard(models.TransientModel):
 
     def _validar_caratula(self, cara):
         try:
-            self.env['account.invoice'].xml_validator(
+                cu.validar_xml(
                 self._read_xml(False, check=True).encode(),
                 'env',
             )

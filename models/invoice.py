@@ -1718,22 +1718,27 @@ version="1.0">
             if dr.gdr_type == "amount":
                 disc_type = "$"
             dr_line['TpoValor'] = disc_type
-            currency_base = self.env.ref('base.CLP').with_context(date=self.date_invoice)
+            currency_base = self.env.ref('base.CLP').with_context(
+                                                        date=self.date_invoice)
             dr_line['ValorDR'] = currency_base.round(dr.valor)
             if self.currency_id != currency_base:
                 currency_id = self.currency_id
                 dr_line['ValorDROtrMnda'] = currency_base.compute(dr.valor, currency_id)
             if self.document_class_id.sii_code in [34] and (self.referencias and self.referencias[0].sii_referencia_TpoDocRef.sii_code == '34'):#solamente si es exento
                 dr_line['IndExeDR'] = 1
-            dr_lines = [{'DscRcgGlobal':dr_line}]
-            result.append( dr_lines )
+            dr_lines = [{'DscRcgGlobal': dr_line}]
+            result.append(dr_lines)
             lin_dr += 1
         return result
 
     def _dte(self, n_atencion=None):
         dte = collections.OrderedDict()
         invoice_lines = self._invoice_lines()
-        dte['Encabezado'] = self._encabezado(invoice_lines['MntExe'], invoice_lines['no_product'], invoice_lines['tax_include'])
+        dte['Encabezado'] = self._encabezado(
+            invoice_lines['MntExe'],
+            invoice_lines['no_product'],
+            invoice_lines['tax_include']
+        )
         lin_ref = 1
         ref_lines = []
         if self.company_id.dte_service_provider == 'SIICERT' and isinstance(n_atencion, string_types) and n_atencion != '' and not self._es_boleta():
@@ -1745,7 +1750,7 @@ version="1.0">
             ref_line['RazonRef'] = "CASO "+n_atencion+"-" + str(self.sii_batch_number)
             lin_ref = 2
             ref_lines.extend([{'Referencia':ref_line}])
-        if self.referencias :
+        if self.referencias:
             for ref in self.referencias:
                 ref_line = collections.OrderedDict()
                 ref_line['NroLinRef'] = lin_ref
@@ -2109,8 +2114,6 @@ version="1.0">
     def invoice_print(self):
         self.ensure_one()
         self.sent = True
-        if self.ticket:
-            return self.env.ref('l10n_cl_fe.action_print_ticket').report_action(self)
         return self.env.ref('account.account_invoices').report_action(self)
 
     @api.multi

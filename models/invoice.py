@@ -1055,6 +1055,9 @@ a VAT."""))
         if self.type in ['out_invoice', 'in_invoice'] and \
             self.document_class_id.sii_code in ncs:
             raise UserError(_('El tipo de documento %s, no es de tipo Documento' % self.document_class_id.name))
+        for gd in self.global_descuentos_recargos:
+            if gd.value <= 0:
+                raise UserError(_("No puede ir una línea igual o menor que 0, elimine la línea o verifique el valor ingresado"))
 
     @api.multi
     def invoice_validate(self):

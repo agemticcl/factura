@@ -757,6 +757,12 @@ class AccountInvoice(models.Model):
             recs = self.search([('name', operator, name)] + args, limit=limit)
         return recs.name_get()
 
+    def action_invoice_cancel(self):
+        if self.sii_result not in [False, 'draft', 'NoEnviado', 'Rechazado', 'Anulado']:
+            raise ("No se puede Cancelar un documento validamente enviado y aceptado en el SII")
+        return super(AccountInvoice, self).action_invoice_cancel()
+
+
     def _buscarTaxEquivalente(self, tax):
         tax_n = self.env['account.tax'].search(
             [

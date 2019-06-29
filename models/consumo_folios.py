@@ -411,7 +411,7 @@ version="1.0">
                     MntExe += l.debit
         MntTotal = Neto + MntExe + TaxMnt
         TasaIVA = self.env['account.move.line'].search([
-                ('move_id', '=', rec.id), 
+                ('move_id', '=', rec.id),
                 ('tax_line_id.amount', '>', 0)
             ], limit=1).tax_line_id.amount
         return Neto, MntExe, TaxMnt, MntTotal, TasaIVA
@@ -661,11 +661,11 @@ version="1.0">
         xml  = self.create_template_env(cf)
         root = etree.XML( xml )
         xml_pret = etree.tostring(root, pretty_print=True).decode()\
-                .replace('<item>','\n').replace('</item>','')\
-                .replace('<itemNoRec>','').replace('</itemNoRec>','\n')\
-                .replace('<itemOtrosImp>','').replace('</itemOtrosImp>','\n')\
-                .replace('<itemUtilizados>','').replace('</itemUtilizados>','\n')\
-                .replace('<itemAnulados>','').replace('</itemAnulados>','\n')
+                .replace('<item>','\n').replace('</item>', '')\
+                .replace('<itemNoRec>','').replace('</itemNoRec>', '\n')\
+                .replace('<itemOtrosImp>','').replace('</itemOtrosImp>', '\n')\
+                .replace('<itemUtilizados>','').replace('</itemUtilizados>', '\n')\
+                .replace('<itemAnulados>','').replace('</itemAnulados>', '\n')
         for TpoDoc in TpoDocs:
         	xml_pret = xml_pret.replace('<key name="'+str(TpoDoc)+'_folios">','').replace('</key>','\n').replace('<key name="'+str(TpoDoc)+'_folios"/>','\n')
         envio_dte = self.env['account.invoice'].sign_full_xml(

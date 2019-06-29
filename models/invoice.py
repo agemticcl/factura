@@ -1036,9 +1036,9 @@ a VAT."""))
             if invoice.type in ('in_invoice', 'in_refund') and invoice.reference:
                 if self.search(
                     [
-                        ('reference','=', invoice.reference),
-                        ('journal_document_class_id','=',invoice.journal_document_class_id.id),
-                        ('partner_id','=', invoice.partner_id.id),
+                        ('reference', '=', invoice.reference),
+                        ('journal_document_class_id', '=',invoice.journal_document_class_id.id),
+                        ('partner_id', '=', invoice.partner_id.id),
                         ('type', '=', invoice.type),
                         ('id', '!=', invoice.id),
                      ]):
@@ -1064,6 +1064,8 @@ a VAT."""))
         for gd in self.global_descuentos_recargos:
             if gd.value <= 0:
                 raise UserError(_("No puede ir una línea igual o menor que 0, elimine la línea o verifique el valor ingresado"))
+        if self.company_id.tax_calculation_rounding_method != 'round_globally':
+            raise UserError("El método de redondeo debe ser Estríctamente Global")
 
     @api.multi
     def invoice_validate(self):

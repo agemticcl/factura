@@ -11,6 +11,7 @@ from . import currency
 #from . import export
 from . import honorarios
 from . import invoice
+from . import ir_module_module
 from . import ir_sequence
 from . import libro
 from . import mail

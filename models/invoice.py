@@ -864,13 +864,13 @@ class AccountInvoice(models.Model):
                 domain = [
                     ('journal_id.type', '=', operation_type),
                  ]
-            if invoice_type  in [ 'in_refund', 'out_refund']:
-                domain += [('sii_document_class_id.document_type','in',['credit_note'] )]
+            if invoice_type in ['in_refund', 'out_refund']:
+                domain += [('sii_document_class_id.document_type', 'in', ['credit_note'])]
             else:
                 options = ['invoice', 'invoice_in']
                 if nd:
                     options.append('debit_note')
-                domain += [('sii_document_class_id.document_type','in', options )]
+                domain += [('sii_document_class_id.document_type', 'in', options)]
             document_classes = self.env[
                 'account.journal.sii_document_class'].search(domain)
             document_class_ids = document_classes.ids
@@ -904,7 +904,7 @@ class AccountInvoice(models.Model):
                     limit=1,
                 ).id
             self.journal_document_class_id = self._default_journal_document_class_id(default)
-        return {'domain': {'journal_document_class_id': self._domain_journal_document_class_id()}}
+        #return {'domain': {'journal_document_class_id': self._domain_journal_document_class_id()}}
 
     @api.onchange('document_class_id', 'partner_id')
     def _check_vat(self):

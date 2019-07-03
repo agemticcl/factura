@@ -52,14 +52,14 @@
                  <button string="Imprimir Cedible" type="object" name="print_cedible" />
               </button>
               <field name="invoice_line_tax_ids" position="attributes">
-                <attribute name="required">1</attribute>    
+                <attribute name="required">1</attribute>
               </field>
 
               <field name="state" position="before">
                 <button name="%(account.action_account_invoice_refund)d" type='action' string='Refund Invoice' groups="base.group_user" attrs="{'invisible': ['|',('type', '=', 'out_invoice'), ('state', 'not in', ('open','proforma2','paid'))]}"/>
               </field>
 
-              <xpath expr="//form/sheet/h1" position="replace"> 
+              <xpath expr="//form/sheet/h1" position="replace">
                 <h1 class="mt0">
                   <div attrs="{'invisible': [('state','=','draft')]}">
                       <field name="document_class_id" class="oe_inline"/> Número:<br/>
@@ -79,7 +79,7 @@
                           placeholder="Glosa descriptiva" options="{'no_open': True}"/>
                   <field name="acteco_ids"  invisible="1"/>
                   <field name="acteco_id" attrs="{'invisible': [('acteco_ids', '=', [])]}"
-                    domain="[('id', 'in', acteco_ids)]" 
+                    domain="[('id', 'in', acteco_ids)]"
                     options="{'no_open': True, 'no_create': True}"/>
               </field>
 
@@ -190,7 +190,7 @@
                   <field name="sii_document_number" invisible="1"/>
                   <field name="move_name" invisible="1"/>
               </form>
-              
+
               <field name="state" position="before">
                 <button name="%(account.action_account_invoice_refund)d" type='action' string='Ask Refund' groups="account.group_account_invoice" attrs="{'invisible': ['|',('type', '=', 'in_invoice'),('state','not in',('open','paid'))]}"/>
               </field>
@@ -200,7 +200,7 @@
                           placeholder="Glosa descriptiva" options="{'no_open': True}"/>
                   <field name="acteco_ids"  invisible="1"/>
                   <field name="acteco_id" attrs="{'invisible': [('acteco_ids', '=', [])]}"
-                    domain="[('id', 'in', acteco_ids)]" 
+                    domain="[('id', 'in', acteco_ids)]"
                     options="{'no_open': True, 'no_create': True}"/>
               </field>
 

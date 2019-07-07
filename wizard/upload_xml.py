@@ -4,11 +4,10 @@ from odoo.tools.translate import _
 from odoo.exceptions import UserError
 import logging
 import base64
-from facturacion_electronica import clase_util as cu
+from facturacion_electronica import facturacion_electronica as fe
 import xmltodict
 from lxml import etree
 import collections
-import dicttoxml
 
 _logger = logging.getLogger(__name__)
 
@@ -73,8 +72,6 @@ class UploadXMLWizard(models.TransientModel):
 
     @api.multi
     def confirm(self, ret=False):
-        context = dict(self._context or {})
-        active_id = context.get('active_id', []) or []
         created = []
         if not self.dte_id:
             dte_id = self.env['mail.message.dte'].search(
@@ -126,14 +123,23 @@ class UploadXMLWizard(models.TransientModel):
         rut = 'CL' + rut
         return rut
 
-    def _read_xml(self, mode="text", check=False):
+    def _get_xml(self):
         if self.document_id:
             xml = self.document_id.xml
         elif self.xml_file:
-            xml = base64.b64decode(self.xml_file).decode('ISO-8859-1').replace('<?xml version="1.0" encoding="ISO-8859-1"?>','').replace('<?xml version="1.0" encoding="ISO-8859-1" ?>','')
-            if check:
-                return xml
-            xml = xml.replace(' xmlns="http://www.sii.cl/SiiDte"', '')
+            xml = base64.b64decode(self.xml_file).decode('ISO-8859-1')
+        return xml
+
+    def _get_xml_name(self):
+        return self.dte_id.name or self.filename
+
+    def _read_xml(self, mode="text", check=False):
+        xml = self._get_xml()\
+            .replace('<?xml version="1.0" encoding="ISO-8859-1"?>', '')\
+            .replace('<?xml version="1.0" encoding="ISO-8859-1" ?>', '')
+        if check:
+            return xml
+        xml = xml.replace(' xmlns="http://www.sii.cl/SiiDte"', '')
         if mode == "etree":
             parser = etree.XMLParser(remove_blank_text=True)
             return etree.fromstring(xml, parser=parser)
@@ -147,157 +153,17 @@ class UploadXMLWizard(models.TransientModel):
                 return envio
         return xml
 
-    def _check_digest_caratula(self):
-        xml = etree.fromstring(self._read_xml(False))
-        string = etree.tostring(xml[0])
-        mess = etree.tostring(etree.fromstring(string), method="c14n")
-        inv_obj = self.env['account.invoice']
-        #our = base64.b64encode(inv_obj.digest(mess))
-        #if our != xml.find("{http://www.w3.org/2000/09/xmldsig#}Signature/{http://www.w3.org/2000/09/xmldsig#}SignedInfo/{http://www.w3.org/2000/09/xmldsig#}Reference/{http://www.w3.org/2000/09/xmldsig#}DigestValue").text:
-        #    return 2, 'Envio Rechazado - Error de Firma'
-        return 0, 'Envio Ok'
-
-    def _check_digest_dte(self, dte):
-        xml = self._read_xml("etree")
-        envio = xml.find("SetDTE")#"{http://www.w3.org/2000/09/xmldsig#}Signature/{http://www.w3.org/2000/09/xmldsig#}SignedInfo/{http://www.w3.org/2000/09/xmldsig#}Reference/{http://www.w3.org/2000/09/xmldsig#}DigestValue").text
-        for e in envio.findall("DTE"):
-            string = etree.tostring(e.find("Documento"))#doc
-            mess = etree.tostring(etree.fromstring(string), method="c14n").decode('iso-8859-1').replace(' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"','').encode('iso-8859-1')# el replace es necesario debido a que python lo agrega solo
-            #our = base64.b64encode(self.env['account.invoice'].digest(mess))
-            #their = e.find("{http://www.w3.org/2000/09/xmldsig#}Signature/{http://www.w3.org/2000/09/xmldsig#}SignedInfo/{http://www.w3.org/2000/09/xmldsig#}Reference/{http://www.w3.org/2000/09/xmldsig#}DigestValue").text
-            #if our != their:
-            #    _logger.warning('DTE No Recibido - Error de Firma: our = %s their=%s' % (our, their))
-                #return 1, 'DTE No Recibido - Error de Firma'
-        return 0, 'DTE Recibido OK'
-
-    def _validar_caratula(self, cara):
-        try:
-                cu.validar_xml(
-                self._read_xml(False, check=True).encode(),
-                'env',
-            )
-        except:
-               return 1, 'Envio Rechazado - Error de Schema'
-        company_id = self.env['res.company'].sudo().search([
-                ('vat','=', self.format_rut(cara['RutReceptor']))
-            ])
-        if not company_id:
-            return 3, 'Rut no corresponde a nuestra empresa'
-        self.dte_id.sudo().company_id = company_id.id
-        partner_id = self.env['res.partner'].search(
-            [
-                ('active', '=', True),
-                ('parent_id', '=', False),
-                ('vat', '=', self.format_rut(cara['RutEmisor']))
-            ]
-        )
-#        if not partner_id :
-#            return 2, 'Rut no coincide con los registros'
-        #for SubTotDTE in cara['SubTotDTE']:
-        #    sii_document_class = self.env['sii.document_class'].search([('sii_code','=', str(SubTotDTE['TipoDTE']))])
-        #    if not sii_document_class:
-        #        return  99, 'Tipo de documento desconocido'
-        return 0, 'Envío Ok'
-
-    def _validar(self, doc):
-        cara, glosa = self._validar_caratula(doc[0][0]['Caratula'])
-        return cara, glosa
-
-    def _validar_dte(self, doc):
-        res = collections.OrderedDict()
-        res['TipoDTE'] = doc['Encabezado']['IdDoc']['TipoDTE']
-        res['Folio'] = doc['Encabezado']['IdDoc']['Folio']
-        res['FchEmis'] = doc['Encabezado']['IdDoc']['FchEmis']
-        res['RUTEmisor'] = doc['Encabezado']['Emisor']['RUTEmisor']
-        res['RUTRecep'] = doc['Encabezado']['Receptor']['RUTRecep']
-        res['MntTotal'] = doc['Encabezado']['Totales']['MntTotal']
-        partner_id = self.env['res.partner'].search([
-            ('active', '=', True),
-            ('parent_id', '=', False),
-            ('vat', '=', self.format_rut(doc['Encabezado']['Emisor']['RUTEmisor']))
-        ])
-        sii_document_class = doc['Encabezado']['IdDoc']['TipoDTE']
-        res['EstadoRecepDTE'] = 0
-        res['RecepDTEGlosa'] = 'DTE Recibido OK'
-        res['EstadoRecepDTE'], res['RecepDTEGlosa'] = self._check_digest_dte(doc)
-        if not sii_document_class:
-            res['EstadoRecepDTE'] = 99
-            res['RecepDTEGlosa'] = 'Tipo de documento desconocido'
-            return res
-        docu = self.env['account.invoice'].search(
-            [
-                ('sii_document_number', '=', doc['Encabezado']['IdDoc']['Folio']),
-                ('partner_id', '=', partner_id.id),
-                ('document_class_id.sii_code', '=', sii_document_class)
-            ])
-        company_id = self.env['res.company'].search([
-                ('vat', '=', self.format_rut(doc['Encabezado']['Receptor']['RUTRecep']))
-            ])
-        if not company_id and (not docu or doc['Encabezado']['Receptor']['RUTRecep'] != self.env['account.invoice'].format_vat(docu.company_id.vat) ) :
-            res['EstadoRecepDTE'] = 3
-            res['RecepDTEGlosa'] = 'Rut no corresponde a la empresa esperada'
-            return res
-        return res
-
-    def _validar_dtes(self):
-        envio = self._read_xml('parse')
-        if 'Documento' in envio['SetDTE']['DTE']:
-            res = {'RecepcionDTE': self._validar_dte(envio['SetDTE']['DTE']['Documento'])}
-        else:
-            res = []
-            for doc in envio['SetDTE']['DTE']:
-                res.extend([
-                    {'RecepcionDTE': self._validar_dte(doc['Documento'])}
-                    ])
-        return res
-
-    def _caratula_respuesta(self, RutResponde, RutRecibe, IdRespuesta="1", NroDetalles=0):
-        caratula = collections.OrderedDict()
-        caratula['RutResponde'] = RutResponde
-        caratula['RutRecibe'] = RutRecibe
-        caratula['IdRespuesta'] = IdRespuesta
-        caratula['NroDetalles'] = NroDetalles
-        caratula['NmbContacto'] = self.env.user.partner_id.name
-        caratula['FonoContacto'] = self.env.user.partner_id.phone
-        caratula['MailContacto'] = self.env.user.partner_id.email
-        caratula['TmstFirmaResp'] = self.env['account.invoice'].time_stamp()
-        return caratula
-
-    def _receipt(self, IdRespuesta):
-        envio = self._read_xml('parse')
-        xml = self._read_xml('etree')
-        resp = collections.OrderedDict()
-        inv_obj = self.env['account.invoice']
-        resp['NmbEnvio'] = self.filename
-        resp['FchRecep'] = inv_obj.time_stamp()
-        resp['CodEnvio'] = inv_obj._acortar_str(IdRespuesta, 10)
-        resp['EnvioDTEID'] = xml[0].attrib['ID']
-        resp['Digest'] = xml.find("{http://www.w3.org/2000/09/xmldsig#}Signature/{http://www.w3.org/2000/09/xmldsig#}SignedInfo/{http://www.w3.org/2000/09/xmldsig#}Reference/{http://www.w3.org/2000/09/xmldsig#}DigestValue").text
-        EstadoRecepEnv, RecepEnvGlosa = self._validar_caratula(envio['SetDTE']['Caratula'])
-        if EstadoRecepEnv == 0:
-            EstadoRecepEnv, RecepEnvGlosa = self._check_digest_caratula()
-        resp['RutEmisor'] = envio['SetDTE']['Caratula']['RutEmisor']
-        resp['RutReceptor'] = envio['SetDTE']['Caratula']['RutReceptor']
-        resp['EstadoRecepEnv'] = EstadoRecepEnv
-        resp['RecepEnvGlosa'] = RecepEnvGlosa
-        NroDte = len(envio['SetDTE']['DTE'])
-        if 'Documento' in envio['SetDTE']['DTE']:
-            NroDte = 1
-        resp['NroDTE'] = NroDte
-        resp['item'] = self._validar_dtes()
-        return resp
-
-    def _RecepcionEnvio(self, Caratula, resultado):
-        resp = '''<?xml version="1.0" encoding="ISO-8859-1"?>
-<RespuestaDTE version="1.0" xmlns="http://www.sii.cl/SiiDte" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sii.cl/SiiDte RespuestaEnvioDTE_v10.xsd" >
-    <Resultado ID="Odoo_resp">
-        <Caratula version="1.0">
-            {0}
-        </Caratula>
-            {1}
-    </Resultado>
-</RespuestaDTE>'''.format(Caratula, resultado)
-        return resp
+    def _get_datos_empresa(self, company_id):
+        firma = self.env.user. get_digital_signature(company_id)
+        return {
+            "Emisor": {
+              "RUTEmisor": self.env['account.invoice'].format_vat(
+                                            company_id.vat),
+              "Modo": "produccion" if company_id.dte_service_provider == 'SII'\
+                          else 'certificacion',
+            },
+            "firma_electronica": firma.parametros_firma(),
+        }
 
     def _create_attachment(self, xml, name, id=False, model='account.invoice'):
         data = base64.b64encode(xml.encode('ISO-8859-1'))
@@ -334,52 +200,44 @@ class UploadXMLWizard(models.TransientModel):
             ],
             limit=1)
         IdRespuesta = self.env.ref('l10n_cl_fe.response_sequence').next_by_id()
-        recep = self._receipt(IdRespuesta)
-        NroDetalles = len(envio['SetDTE']['DTE'])
-        resp_dtes = dicttoxml.dicttoxml(recep, root=False, attr_type=False).decode().replace('<item>','\n').replace('</item>','\n')
-        RecepcionEnvio = '''
-<RecepcionEnvio>
-    {0}
-</RecepcionEnvio>
-        '''.format(
-            resp_dtes,
-        )
-        RutRecibe = envio['SetDTE']['Caratula']['RutEmisor']
-        caratula_recepcion_envio = self._caratula_respuesta(
-            self.env['account.invoice'].format_vat(company_id.vat),
-            RutRecibe,
-            IdRespuesta,
-            NroDetalles,
-        )
-        caratula = dicttoxml.dicttoxml(
-            caratula_recepcion_envio,
-            root=False,
-            attr_type=False,
-        ).decode().replace('<item>', '\n').replace('</item>', '\n')
-        resp = self._RecepcionEnvio(caratula, RecepcionEnvio )
-        respuesta = '<?xml version="1.0" encoding="ISO-8859-1"?>\n'+self.env['account.invoice'].sudo().with_context({'company_id': company_id.id}).sign_full_xml(
-            resp.replace('<?xml version="1.0" encoding="ISO-8859-1"?>\n', ''),
-            'Odoo_resp',
-            'env_resp')
+        vals = self._get_datos_empresa(company_id)
+        vals.update({
+                "Recepciones":
+                [
+                    {
+                        "IdRespuesta": IdRespuesta,
+                        "RutResponde": self.env['account.invoice'].format_vat(
+                                        self.env.user.partner_id.vat),
+                        "NmbContacto": self.env.user.partner_id.name,
+                        "FonoContacto": self.env.user.partner_id.phone,
+                        "MailContacto": self.env.user.partner_id.email,
+                        "xml_nombre": self._get_xml_name(),
+                        "xml_envio": self._get_xml(),
+                    }
+                ]
+        })
+        respuesta = fe.leer_xml(vals)
         if self.dte_id:
-            att = self._create_attachment(
-                respuesta,
-                'recepcion_envio_' + (self.filename or self.dte_id.name) + '_' + str(IdRespuesta),
-                self.dte_id.id,
-                'mail.message.dte')
-            dte_email_id = self.dte_id.company_id.dte_email_id or self.env.user.company_id.dte_email_id
-            values = {
-                    'res_id': self.dte_id.id,
-                    'email_from': dte_email_id.name_get()[0][1],
-                    'email_to': self.sudo().dte_id.mail_id.email_from,
-                    'auto_delete': False,
-                    'model': "mail.message.dte",
-                    'body': 'XML de Respuesta Envío, Estado: %s , Glosa: %s ' % (recep['EstadoRecepEnv'], recep['RecepEnvGlosa'] ),
-                    'subject': 'XML de Respuesta Envío',
-                    'attachment_ids': [[6, 0, att.ids]],
-                }
-            send_mail = self.env['mail.mail'].sudo().create(values)
-            send_mail.send()
+            for r in respuesta:
+                att = self._create_attachment(
+                    r['sii_xml_response'],
+                    r['respuesta'],
+                    self.dte_id.id,
+                    'mail.message.dte')
+                dte_email_id = self.dte_id.company_id.dte_email_id or\
+                    self.env.user.company_id.dte_email_id
+                values = {
+                        'res_id': self.dte_id.id,
+                        'email_from': dte_email_id.name_get()[0][1],
+                        'email_to': self.sudo().dte_id.mail_id.email_from,
+                        'auto_delete': False,
+                        'model': "mail.message.dte",
+                        'body': 'XML de Respuesta Envío, Estado: %s , Glosa: %s ' % (r['EstadoRecepEnv'], r['RecepEnvGlosa'] ),
+                        'subject': 'XML de Respuesta Envío',
+                        'attachment_ids': [[6, 0, att.ids]],
+                    }
+                send_mail = self.env['mail.mail'].sudo().create(values)
+                send_mail.send()
 
     def _create_partner(self, data):
         if self.pre_process and self.type == 'compras':
@@ -389,10 +247,11 @@ class UploadXMLWizard(models.TransientModel):
             type = "Recep"
             if data.get('RUT%s' % type) in [False, '66666666-6', '00000000-0']:
                 return self.env.ref('l10n_cl_fe.par_cfa')
-        giro_id = self.env['sii.activity.description'].search([('name', '=', data.get('Giro%s'%type, 'Boleta'))])
+        giro_id = self.env['sii.activity.description'].search([
+                    ('name', '=', data.get('Giro%s' % type, 'Boleta'))])
         if not giro_id:
             giro_id = self.env['sii.activity.description'].create({
-                'name': data.get('Giro%s'%type, 'Boleta'),
+                'name': data.get('Giro%s' % type, 'Boleta'),
             })
         type = 'Emisor'
         dest = 'Origen'
@@ -403,7 +262,8 @@ class UploadXMLWizard(models.TransientModel):
             rut_path = 'RUTRecep'
         rut = self.format_rut(data[rut_path])
         name = (data.get('RznSoc') or data.get('RznSocEmisor')) if self.type=="compras" else data['RznSocRecep']
-        city_id = self.env['res.city'].search(['name', '=',  data.get('Cmna%s'%dest, '').title()])
+        city_id = self.env['res.city'].search([
+                    ('name', '=',  data.get('Cmna%s' % dest, '').title())])
         data = {
             'name': name,
             'activity_description': giro_id.id,
@@ -411,8 +271,8 @@ class UploadXMLWizard(models.TransientModel):
             'document_type_id': self.env.ref('l10n_cl_fe.dt_RUT').id,
             'responsability_id': self.env.ref('l10n_cl_fe.res_IVARI').id,
             'document_number': data[rut_path],
-            'street': data['Dir%s'%dest],
-            'city': data.get('Ciudad%s'%dest, ''),
+            'street': data['Dir%s' % dest],
+            'city': data.get('Ciudad%s' % dest, ''),
             'company_type': 'company',
             'city_id': city_id.id
         }
@@ -438,7 +298,7 @@ class UploadXMLWizard(models.TransientModel):
         return res
 
     def _buscar_impuesto(self, name="Impuesto", amount=0, sii_code=0,
-                          sii_type=False, IndExe=False, company_id=False):
+                         sii_type=False, IndExe=False, company_id=False):
         query = [
             ('amount', '=', amount),
             ('sii_code', '=', sii_code),
@@ -486,7 +346,9 @@ class UploadXMLWizard(models.TransientModel):
                                     company_id=company_id)
         price = float(line.find("PrcItem").text if line.find("PrcItem") is not None else line.find("MontoItem").text)
         if price_included:
-            price = imp.compute_all(price, self.env.user.company_id.currency_id, 1)['total_excluded']
+            price = imp.compute_all(price,
+                                    self.env.user.company_id.currency_id,
+                                    1)['total_excluded']
         values = {
             'sale_ok': (self.type == 'ventas'),
             'name': line.find("NmbItem").text,
@@ -508,7 +370,8 @@ class UploadXMLWizard(models.TransientModel):
                     self.get_product_values(data, company_id, price_included))
         return product_id
 
-    def _buscar_producto(self, document_id, line, company_id, price_included=False):
+    def _buscar_producto(self, document_id, line, company_id,
+                         price_included=False):
         default_code = False
         CdgItem = line.find("CdgItem")
         NmbItem = line.find("NmbItem").text

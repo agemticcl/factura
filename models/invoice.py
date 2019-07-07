@@ -387,7 +387,7 @@ class AccountInvoice(models.Model):
         states={'draft': [('readonly', False)]},
     )
 
-    @api.depends('state', 'journal_id', 'date_invoice', 'document_class_id')
+    @api.depends('state',  'journal_id', 'date_invoice', 'document_class_id')
     def _get_sequence_prefix(self):
         for invoice in self:
             if invoice.use_documents and invoice.type in ['out_invoice', 'out_refund']:

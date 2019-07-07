@@ -178,11 +178,12 @@ class UploadXMLWizard(models.TransientModel):
             )
         except:
                return 1, 'Envio Rechazado - Error de Schema'
-        self.dte_id.company_id = self.env['res.company'].search([
+        company_id = self.env['res.company'].sudo().search([
                 ('vat','=', self.format_rut(cara['RutReceptor']))
             ])
-        if not self.dte_id.company_id:
+        if not company_id:
             return 3, 'Rut no corresponde a nuestra empresa'
+        self.dte_id.sudo().company_id = company_id.id
         partner_id = self.env['res.partner'].search(
             [
                 ('active', '=', True),

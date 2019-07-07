@@ -962,8 +962,10 @@ a VAT."))
 
     @api.onchange('sii_document_number')
     def set_reference(self):
-        if self.type in ['in_invoice', 'in_refund']:
-            self.reference = "%s %s" %(self.document_class_id.pre_code_prefix, self.sii_document_number)
+        if self.type in ['in_invoice', 'in_refund'] and self.sii_document_number:
+            self.reference = "%s %s" %(
+                        self.document_class_id.doc_code_prefix,
+                         self.sii_document_number)
 
     @api.multi
     def action_move_create(self):

@@ -210,7 +210,7 @@ class ValidarDTEWizard(models.TransientModel):
                 continue
             dte = self._resultado(
                 TipoDTE=inv.document_class_id.sii_code,
-                Folio=inv.reference,
+                Folio=inv.sii_document_number,
                 FchEmis=inv.date_invoice,
                 RUTEmisor=inv.format_vat(inv.partner_id.vat),
                 RUTRecep=inv.format_vat(inv.company_id.vat),
@@ -272,7 +272,7 @@ class ValidarDTEWizard(models.TransientModel):
     def _recep(self, inv, RutFirma):
         receipt = collections.OrderedDict()
         receipt['TipoDoc'] = inv.document_class_id.sii_code
-        receipt['Folio'] = int(inv.reference)
+        receipt['Folio'] = inv.sii_document_number
         receipt['FchEmis'] = inv.date_invoice
         receipt['RUTEmisor'] = inv.format_vat(inv.partner_id.vat)
         receipt['RUTRecep'] = inv.format_vat(inv.company_id.vat)

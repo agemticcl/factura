@@ -146,6 +146,7 @@ class AccountInvoice(models.Model):
             for dc in document_classes:
                 if dc.sii_document_class_id.id == default:
                     self.journal_document_class_id = dc.id
+                    self.document_class_id = dc.sii_document_class_id.id
         elif document_classes:
             default = self.get_document_class_default(document_classes)
         return default
@@ -165,7 +166,7 @@ class AccountInvoice(models.Model):
     def _get_barcode_img(self):
         for r in self:
             if r.sii_barcode:
-                r.sii_barcode_img =  r.get_barcode_img()
+                r.sii_barcode_img = r.get_barcode_img()
 
     vat_discriminated = fields.Boolean(
             'Discriminate VAT?',
@@ -174,26 +175,23 @@ class AccountInvoice(models.Model):
             readonly=False,
             help="Discriminate VAT on Quotations and Sale Orders?",
         )
-    available_journal_document_class_ids = fields.Many2many(
-            'account.journal.sii_document_class',
-            #    compute='_get_available_journal_document_class',
-            string='Available Journal Document Classes',
+    document_class_ids = fields.Many2many(
+            'sii.document_class',
+            related='journal_id.document_class_ids',
+            string='Available Document Classes',
         )
     journal_document_class_id = fields.Many2one(
             'account.journal.sii_document_class',
             string='Documents Type',
             default=lambda self: self._default_journal_document_class_id(),
             readonly=True,
-            store=True,
             states={'draft': [('readonly', False)]},
         )
     document_class_id = fields.Many2one(
             'sii.document_class',
-            related='journal_document_class_id.sii_document_class_id',
             string='Document Type',
-            copy=False,
             readonly=True,
-            store=True,
+            states={'draft': [('readonly', False)]},
         )
     sii_code = fields.Integer(
             related='document_class_id.sii_code',
@@ -203,14 +201,16 @@ class AccountInvoice(models.Model):
             store=True,
         )
     sii_document_number = BigInt(
-        string='Document Number',
-        copy=False,
-        readonly=True,)
+            string='Document Number',
+            copy=False,
+            readonly=True,
+            states={'draft': [('readonly', False)]},
+        )
     responsability_id = fields.Many2one(
-        'sii.responsability',
-        string='Responsability',
-        related='commercial_partner_id.responsability_id',
-        store=True,
+            'sii.responsability',
+            string='Responsability',
+            related='commercial_partner_id.responsability_id',
+            store=True,
         )
     iva_uso_comun = fields.Boolean(
             string="Uso Común",
@@ -390,7 +390,7 @@ class AccountInvoice(models.Model):
     @api.depends('state', 'journal_id', 'date_invoice', 'document_class_id')
     def _get_sequence_prefix(self):
         for invoice in self:
-            if invoice.use_documents:
+            if invoice.use_documents and invoice.type in ['out_invoice', 'out_refund']:
                 invoice.sequence_number_next_prefix = invoice.document_class_id.doc_code_prefix or ''
             else:
                 super(AccountInvoice, self)._get_sequence_prefix()
@@ -398,7 +398,7 @@ class AccountInvoice(models.Model):
     @api.depends('state', 'journal_id', 'document_class_id')
     def _get_sequence_number_next(self):
         for invoice in self:
-            if invoice.use_documents:
+            if invoice.use_documents and invoice.type in ['out_invoice', 'out_refund']:
                 invoice.sequence_number_next = invoice.journal_document_class_id.sequence_id.number_next_actual
             else:
                 super(AccountInvoice, self)._get_sequence_number_next()
@@ -669,12 +669,17 @@ class AccountInvoice(models.Model):
             self.forma_pago = self.payment_term_id.dte_sii_code
 
     @api.model
-    def _prepare_refund(self, invoice, date_invoice=None, date=None, description=None, journal_id=None, tipo_nota=61, mode='1'):
-        values = super(AccountInvoice, self)._prepare_refund(invoice, date_invoice, date, description, journal_id)
+    def _prepare_refund(self, invoice, date_invoice=None,
+                        date=None, description=None, journal_id=None,
+                        tipo_nota=61, mode='1'):
+        values = super(AccountInvoice, self)._prepare_refund(invoice,
+                                                             date_invoice,
+                                                             date, description,
+                                                             journal_id)
         jdc = self.env['account.journal.sii_document_class'].search(
                 [
-                    ('sii_document_class_id.sii_code','=', tipo_nota),
-                    ('journal_id','=', invoice.journal_id.id),
+                    ('sii_document_class_id.sii_code', '=', tipo_nota),
+                    ('journal_id', '=', invoice.journal_id.id),
                 ],
                 limit=1,
             )
@@ -688,9 +693,10 @@ class AccountInvoice(models.Model):
             type = 'in_invoice'
         values.update({
                 'type': type,
+                'document_class_id': jdc.sii_document_class_id.id,
                 'journal_document_class_id': jdc.id,
                 'referencias':[[0,0, {
-                        'origen': int(invoice.sii_document_number or invoice.reference),
+                        'origen':  invoice.sii_document_number,
                         'sii_referencia_TpoDocRef': invoice.document_class_id.id,
                         'sii_referencia_CodRef': mode,
                         'motivo': description,
@@ -701,13 +707,15 @@ class AccountInvoice(models.Model):
 
     @api.multi
     @api.returns('self')
-    def refund(self, date_invoice=None, date=None, description=None, journal_id=None, tipo_nota=61, mode='1'):
+    def refund(self, date_invoice=None, date=None, description=None,
+               journal_id=None, tipo_nota=61, mode='1'):
         new_invoices = self.browse()
         for invoice in self:
             # create the new invoice
-            values = self._prepare_refund(invoice, date_invoice=date_invoice, date=date,
-                                    description=description, journal_id=journal_id,
-                                    tipo_nota=tipo_nota, mode=mode)
+            values = self._prepare_refund(invoice, date_invoice=date_invoice,
+                                          date=date, description=description,
+                                          journal_id=journal_id,
+                                          tipo_nota=tipo_nota, mode=mode)
             refund_invoice = self.create(values)
             invoice_type = {'out_invoice': ('customer invoices credit note'),
                             'out_refund': ('customer invoices debit note'),
@@ -761,7 +769,6 @@ class AccountInvoice(models.Model):
         if self.sii_result not in [False, 'draft', 'NoEnviado', 'Rechazado', 'Anulado']:
             raise ("No se puede Cancelar un documento validamente enviado y aceptado en el SII")
         return super(AccountInvoice, self).action_invoice_cancel()
-
 
     def _buscarTaxEquivalente(self, tax):
         tax_n = self.env['account.tax'].search(
@@ -876,10 +883,16 @@ class AccountInvoice(models.Model):
             document_class_ids = document_classes.ids
         return document_class_ids
 
+    @api.onchange('journal_document_class_id')
+    def set_document_class_id(self):
+        if self.move_id:
+            return
+        self.document_class_id = self.journal_document_class_id.sii_document_class_id.id
+
     @api.onchange('journal_id', 'partner_id')
     def update_domain_journal(self):
         document_classes = self._get_available_journal_document_class()
-        result = {'domain':{
+        result = {'domain': {
             'journal_document_class_id' : [('id', 'in', document_classes)],
         }}
         return result
@@ -891,7 +904,7 @@ class AccountInvoice(models.Model):
             query = []
             if not default and not self.journal_document_class_id:
                 query.append(
-                    ('sii_document_class_id','=', self.document_class_id.id),
+                    ('sii_document_class_id', '=', self.document_class_id.id),
                 )
             if self.journal_document_class_id.journal_id != self.journal_id or not default:
                 query.append(
@@ -904,14 +917,16 @@ class AccountInvoice(models.Model):
                     limit=1,
                 ).id
             self.journal_document_class_id = self._default_journal_document_class_id(default)
-        #return {'domain': {'journal_document_class_id': self._domain_journal_document_class_id()}}
 
-    @api.onchange('document_class_id', 'partner_id')
+    '''
+    @TODO mejor forma de avisar problema conrut
+    @api.onchange("document_class_id", "partner_id")
     def _check_vat(self):
         if self.partner_id and not self._es_boleta() and not self.partner_id.commercial_partner_id.document_number and self.vat_discriminated:
-            raise UserError(_("""The customer/supplier does not have a VAT \
+            raise UserError(_("The customer/supplier does not have a VAT \
 defined. The type of invoicing document you selected requires you tu settle \
-a VAT."""))
+a VAT."))
+    '''
 
     @api.depends(
         'document_class_id',
@@ -928,9 +943,9 @@ a VAT."""))
             inv.vat_discriminated = vat_discriminated
 
     @api.one
-    @api.constrains('reference', 'partner_id', 'company_id', 'type','journal_document_class_id')
+    @api.constrains('reference',  'partner_id',  'company_id',  'type',  'journal_document_class_id')
     def _check_reference_in_invoice(self):
-        if self.type in ['in_invoice', 'in_refund'] and self.reference:
+        if self.type in ['in_invoice', 'in_refund'] and self.sii_document_number:
             domain = [('type', '=', self.type),
                       ('reference', '=', self.reference),
                       ('partner_id', '=', self.partner_id.id),
@@ -943,7 +958,12 @@ a VAT."""))
             if invoice_ids:
                 raise UserError(u'El numero de factura debe ser unico por Proveedor.\n'\
                                 u'Ya existe otro documento con el numero: %s para el proveedor: %s' %
-                                (self.reference, self.partner_id.display_name))
+                                (self.sii_document_number, self.partner_id.display_name))
+
+    @api.onchange('sii_document_number')
+    def set_reference(self):
+        if self.type in ['in_invoice', 'in_refund']:
+            self.reference = "%s %s" %(self.document_class_id.pre_code_prefix, self.sii_document_number)
 
     @api.multi
     def action_move_create(self):
@@ -956,23 +976,23 @@ a VAT."""))
                             'Please define sequence on the journal related documents to this invoice.'))
                     sii_document_number = obj_inv.journal_document_class_id.sequence_id.next_by_id()
                     prefix = obj_inv.document_class_id.doc_code_prefix or ''
-                    move_name = (prefix + str(sii_document_number)).replace(' ','')
+                    move_name = (prefix + str(sii_document_number)).replace(' ', '')
                     obj_inv.write(
                         {
-                            'sii_document_number': int(sii_document_number),
-                            'move_name': move_name
+                            'sii_document_number':  int(sii_document_number),
+                            'move_name':  move_name
                         })
         super(AccountInvoice, self).action_move_create()
         for obj_inv in self:
             invtype = obj_inv.type
-            if invtype in ('in_invoice', 'in_refund'):
+            if invtype in ('in_invoice',  'in_refund') and  obj_inv.reference and not obj_inv.sii_document_number:
                 obj_inv.sii_document_number = int(obj_inv.reference)
             document_class_id = obj_inv.document_class_id.id
-            guardar = {'document_class_id': document_class_id,
-                       'sii_document_number': int(obj_inv.sii_document_number),
-                       'no_rec_code': obj_inv.no_rec_code,
-                       'iva_uso_comun': obj_inv.iva_uso_comun,
-                    }
+            guardar = {'document_class_id':  document_class_id,
+                       'sii_document_number':  obj_inv.sii_document_number,
+                       'no_rec_code':  obj_inv.no_rec_code,
+                       'iva_uso_comun':  obj_inv.iva_uso_comun,
+                       }
             obj_inv.move_id.write(guardar)
         return True
 
@@ -1033,16 +1053,16 @@ a VAT."""))
     @api.multi
     def _check_duplicate_supplier_reference(self):
         for invoice in self:
-            if invoice.type in ('in_invoice', 'in_refund') and invoice.reference:
+            if invoice.type in ('in_invoice',  'in_refund') and invoice.sii_document_number:
                 if self.search(
                     [
-                        ('reference', '=', invoice.reference),
-                        ('journal_document_class_id', '=',invoice.journal_document_class_id.id),
+                        ('sii_document_number', '=',  invoice.sii_document_number),
+                        ('document_class_id', '=',  invoice.document_class_id.id),
                         ('partner_id', '=', invoice.partner_id.id),
                         ('type', '=', invoice.type),
                         ('id', '!=', invoice.id),
                      ]):
-                    raise UserError('El documento %s, Folio %s de la Empresa %s ya se en cuentra registrado' % ( invoice.document_class_id.name, invoice.reference, invoice.partner_id.name))
+                    raise UserError('El documento %s, Folio %s de la Empresa %s ya se en cuentra registrado' % ( invoice.document_class_id.name,  invoice.sii_document_number,  invoice.partner_id.name))
 
     def _validaciones_uso_dte(self):
         ncs = [60, 61, 112, 802]
@@ -1062,7 +1082,7 @@ a VAT."""))
             self.document_class_id.sii_code in ncs:
             raise UserError(_('El tipo de documento %s, no es de tipo Documento' % self.document_class_id.name))
         for gd in self.global_descuentos_recargos:
-            if gd.value <= 0:
+            if gd.valor <= 0:
                 raise UserError(_("No puede ir una línea igual o menor que 0, elimine la línea o verifique el valor ingresado"))
         if self.company_id.tax_calculation_rounding_method != 'round_globally':
             raise UserError("El método de redondeo debe ser Estríctamente Global")
@@ -2037,7 +2057,7 @@ version="1.0">
     def set_dte_claim(self, rut_emisor=False, company_id=False, sii_document_number=False, document_class_id=False, claim=False):
         rut_emisor = rut_emisor or self.format_vat(self.company_id.partner_id.vat)
         company_id = company_id or self.company_id
-        sii_document_number = sii_document_number or self.sii_document_number or self.reference
+        sii_document_number = sii_document_number
         document_class_id = document_class_id or self.document_class_id
         claim = claim or self.claim
         token = self.sii_xml_request.get_token(self.env.user, self.company_id)

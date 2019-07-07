@@ -40,9 +40,9 @@
             <field name="inherit_id" ref="account.invoice_form" />
             <field name="arch" type="xml">
               <form>
-                  <field name="available_journal_document_class_ids" invisible="1"/>
+                  <field name="document_class_ids" invisible="1"/>
                   <field name="use_documents" invisible="1"/>
-                  <field name="sii_document_number" invisible="1"/>
+                  <field name="sii_document_number" invisible="1" readonly="1"/>
                   <field name="move_name" invisible="1"/>
                   <field name="sii_code" invisible="1"/>
               </form>
@@ -61,13 +61,21 @@
 
               <xpath expr="//form/sheet/h1" position="replace">
                 <h1 class="mt0">
-                  <div attrs="{'invisible': [('state','=','draft')]}">
-                      <field name="document_class_id" class="oe_inline"/> Número:<br/>
+                  <div attrs="{'invisible': [('state', '=', 'draft'), ('type', 'not in', ['in_invoice', 'in_refund']), ('use_documents', '=', False)]}">
+                      <field name="document_class_id"
+                          options="{'no_open': True, 'no_create': True}"
+                          domain="[('id', 'in', document_class_ids)]"
+                          class="oe_inline"/> Número:<br/>
                       <field name="number" readonly="1" class="oe_inline"/>
                   </div>
-                  <div attrs="{'invisible': [('state','!=','draft')]}">
+                  <div attrs="{'invisible': ['|', ('state', '!=', 'draft'), ('type', 'in', ['in_invoice', 'in_refund'])]}">
                       <label string="Siguiente" /> <br/>
-                      <field name="document_class_id" class="oe_inline"/> Número:<br/>
+                      <field name="journal_document_class_id"
+                        attrs="{'invisible':[('use_documents', '=', False)],
+                                'required':[('use_documents', '=', True), ('state', '=', 'draft')],
+                                'readonly':['|', ('state', '!=', 'draft'), ('sii_document_number', '>', 0)]}"
+                        options="{'no_create': True}"
+                        domain="[('sii_document_class_id', 'in', document_class_ids)]"/> Número:<br/>
                       <field name="sequence_number_next_prefix" class="oe_inline"/>
                       <field name="sequence_number_next" class="oe_inline" readonly="True"/>
                   </div>
@@ -133,9 +141,6 @@
               </field>
 
               <field name="journal_id" position="after">
-                  <field name="journal_document_class_id"
-                        attrs="{'invisible':[('use_documents','=',False)],'required':[('use_documents','=',True)],'readonly':['|',('state','!=','draft'),('sii_document_number','>',0)]}"
-                        options="{'no_create': True}"/>
                   <field name="ticket" attrs="{'invisible': [('sii_code', 'in', [39, 41])]}" />
               </field>
 
@@ -185,11 +190,28 @@
             <field name="inherit_id" ref="account.invoice_supplier_form"/>
             <field name="arch" type="xml">
               <form>
-                  <field name="available_journal_document_class_ids" invisible="1"/>
+                  <field name="document_class_ids" invisible="1"/>
                   <field name="use_documents" invisible="1"/>
-                  <field name="sii_document_number" invisible="1"/>
                   <field name="move_name" invisible="1"/>
               </form>
+              <xpath expr="//form/sheet/div[1]/label[1]" position="before">
+                  <label string="Folio Interno" />
+              </xpath>
+              <xpath expr="//form/sheet/div[1]" position="after">
+                <div attrs="{'invisible': [('use_documents', '=', False)]}">
+                  <h1 class="mt0">
+                      <label string="Documento y Folio SII" />
+                      <div attrs="{'invisible': [('state', '=', 'draft'), ('type', 'not in', ['in_invoice', 'in_refund']), ('use_documents', '=', False)]}">
+                          <field name="document_class_id"
+                              options="{'no_open': True, 'no_create': True}"
+                              domain="[('id', 'in', document_class_ids)]"
+                              class="oe_inline"/><br/>
+                           Número:
+                          <field name="sii_document_number" class="oe_inline"/>
+                      </div>
+                  </h1>
+                </div>
+              </xpath>
 
               <field name="state" position="before">
                 <button name="%(account.action_account_invoice_refund)d" type='action' string='Ask Refund' groups="account.group_account_invoice" attrs="{'invisible': ['|',('type', '=', 'in_invoice'),('state','not in',('open','paid'))]}"/>
@@ -223,15 +245,6 @@
                   </field>
               </field>
 
-              <field name="journal_id" position="after">
-                  <field name="journal_document_class_id"
-                          attrs="{'invisible':[('use_documents','=',False)],
-                              'required':[('use_documents','=',True)],
-                              'readonly':[
-                                  '|',('state','!=','draft'),
-                                      ('sii_document_number','>',0)]}"
-                          options="{'no_create': True}"/>
-              </field>
               <xpath expr="//notebook/page[2]/group" position="after">
                   <field name="referencias" mode="tree">
                     <form>

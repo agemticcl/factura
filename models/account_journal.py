@@ -23,6 +23,10 @@ class AccountJournal(models.Model):
             'journal_id',
             'Documents Class',
         )
+    document_class_ids = fields.Many2many(
+        'sii.document_class',
+        string="Document Class IDs"
+    )
     use_documents = fields.Boolean(
             string='Use Documents?',
             default='_get_default_doc',
@@ -43,6 +47,12 @@ class AccountJournal(models.Model):
             string="Restore Mode",
             default=False,
         )
+
+    @api.onchange('journal_document_class_ids')
+    def set_documents(self):
+        self.document_class_ids = []
+        for r in self.journal_document_class_ids:
+            self.document_class_ids += r.sii_document_class_id
 
     @api.onchange('journal_activities_ids')
     def max_actecos(self):

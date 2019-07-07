@@ -472,10 +472,7 @@ version="1.0">
         det['TpoDoc'] = rec.document_class_id.sii_code
         #det['Emisor']
         #det['IndFactCompra']
-        if self.tipo_operacion in ['COMPRA']:
-            det['NroDoc'] = int(rec.ref)
-        else:
-            det['NroDoc'] = int(rec.sii_document_number)
+        det['NroDoc'] = rec.sii_document_number
         if rec.canceled:
             det['Anulado'] = 'A'
         #det['Operacion']

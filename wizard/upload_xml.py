@@ -226,7 +226,7 @@ class UploadXMLWizard(models.TransientModel):
             return res
         docu = self.env['account.invoice'].search(
             [
-                ('reference', '=', doc['Encabezado']['IdDoc']['Folio']),
+                ('sii_document_number', '=', doc['Encabezado']['IdDoc']['Folio']),
                 ('partner_id', '=', partner_id.id),
                 ('document_class_id.sii_code', '=', sii_document_class)
             ])

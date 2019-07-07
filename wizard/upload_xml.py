@@ -785,15 +785,12 @@ class UploadXMLWizard(models.TransientModel):
                     'global_descuentos_recargos': drs,
                 })
         Folio = IdDoc.find("Folio").text
-        if partner_id and not self.pre_process and self.type == 'compras':
-            invoice.update({
-                'reference': Folio,
-                'journal_document_class_id': journal_document_class_id.id,
-            })
-        elif self.type == 'ventas':
-            invoice.update({
+        invoice.update({
                 'sii_document_number': Folio,
-                'journal_document_class_id': journal_document_class_id.id,
+                'document_class_id': journal_document_class_id.id,
+            })
+        if self.type == 'ventas':
+            invoice.update({
                 'move_name': '%s%s' % (journal_document_class_id.sii_document_class_id.doc_code_prefix, Folio),
             })
         else:
@@ -930,7 +927,7 @@ class UploadXMLWizard(models.TransientModel):
             type = ['out_invoice', 'out_refund']
         return self.env['account.invoice'].search(
             [
-                ('reference', '=', IdDoc.find("Folio").text),
+                ('sii_document_number', '=', IdDoc.find("Folio").text),
                 ('type', 'in', type),
                 ('document_class_id.sii_code', '=', IdDoc.find("TipoDTE").text),
                 ('partner_id.vat', '=', self.format_rut(Emisor.find("RUTEmisor").text)),

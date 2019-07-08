@@ -452,12 +452,12 @@ class UploadXMLWizard(models.TransientModel):
                 raise UserError(_('Producto para el proveedor marcado como archivado'))
         return product_id.id
 
-    def _prepare_line(self, line, document_id, account_id, type, company_id,
+    def _prepare_line(self, line, document_id, type, company_id, fpos_id,
                       price_included=False):
         data = {}
         product_id = self._buscar_producto(document_id, line, company_id,
                                            price_included)
-        if isinstance(product_id, int):
+        if isinstance(product_id,int):
             data.update(
                 {
                     'product_id': product_id,
@@ -465,9 +465,10 @@ class UploadXMLWizard(models.TransientModel):
             )
         elif not product_id:
             return False
+        _logger.warning("pp%s" %product_id)
         if line.find("MntExe") is not None:
             price_subtotal = float(line.find("MntExe").text)
-        else :
+        else:
             price_subtotal = float(line.find("MontoItem").text)
         discount = 0
         if line.find("DescuentoPct") is not None:
@@ -475,11 +476,10 @@ class UploadXMLWizard(models.TransientModel):
         price = float(line.find("PrcItem").text) if line.find("PrcItem") is not None else price_subtotal
         DescItem = line.find("DescItem")
         data.update({
-            'name':  DescItem.text if DescItem is not None else line.find("NmbItem").text,
+            'name': DescItem.text if DescItem is not None else line.find("NmbItem").text,
             'price_unit': price,
             'discount': discount,
             'quantity': line.find("QtyItem").text if line.find("QtyItem") is not None else 1,
-            'account_id': account_id,
             'price_subtotal': price_subtotal,
         })
         if self.pre_process and self.type == 'compras':
@@ -606,8 +606,10 @@ class UploadXMLWizard(models.TransientModel):
             account_id = partner_id.property_account_payable_id.id or journal_document_class_id.journal_id.default_debit_account_id.id
             if invoice['type'] in ('out_invoice', 'in_refund'):
                 account_id = partner_id.property_account_receivable_id.id or journal_document_class_id.journal_id.default_credit_account_id.id
+            fpos = self.env['account.fiscal.position'].get_fiscal_position(partner_id.id, delivery_id=partner_id.address_get(['delivery'])['delivery'])
             invoice.update(
             {
+                'fiscal_position': fpos.id if fpos else False,
                 'account_id': account_id,
                 'partner_id': partner_id.id,
             })
@@ -682,13 +684,12 @@ class UploadXMLWizard(models.TransientModel):
         )
         return journal_sii
 
-    def _get_invoice_lines(self, documento, document_id, account_id,
-                           invoice_type, price_included, company_id):
+    def _get_invoice_lines(self, documento, document_id, invoice_type, fpos,
+                           price_included, company_id):
         lines = []
         for line in documento.findall("Detalle"):
-            new_line = self._prepare_line(line, document_id, account_id,
-                                          invoice_type, company_id,
-                                          price_included)
+            new_line = self._prepare_line(line, document_id, invoice_type,
+                                          company_id, fpos, price_included)
             if new_line:
                 lines.append(new_line)
         return lines
@@ -714,8 +715,8 @@ class UploadXMLWizard(models.TransientModel):
         lines.extend(self._get_invoice_lines(
                     documento,
                     document_id,
-                    data['account_id'],
                     data['type'],
+                    data['fiscal_position'],
                     price_included,
                     company_id))
         product_id = self.env['product.product'].search([
@@ -747,7 +748,7 @@ class UploadXMLWizard(models.TransientModel):
                     'price_unit': price,
                     'quantity': 1,
                     'price_subtotal': price_subtotal,
-                    'account_id':  journal_document_class_id.journal_id.default_debit_account_id.id
+                    #'account_id':
                     }]
                 )
         #if 'IVATerc' in dte['Encabezado']['Totales']:

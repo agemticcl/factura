@@ -459,7 +459,6 @@ class UploadXMLWizard(models.TransientModel):
             )
         elif not product_id:
             return False
-        _logger.warning("pp%s" %product_id)
         if line.find("MntExe") is not None:
             price_subtotal = float(line.find("MntExe").text)
         else:

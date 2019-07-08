@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
+from odoo.tools.safe_eval import safe_eval
 from odoo.tools.translate import _
 from odoo.exceptions import UserError
 import logging
@@ -104,15 +105,10 @@ class UploadXMLWizard(models.TransientModel):
             target_model = 'purchase.order'
         if ret:
             return created
-        return {
-            'type': 'ir.actions.act_window',
-            'name': _('List of Results'),
-            'view_type': 'form',
-            'view_mode': 'tree',
-            'res_model': target_model,
-            'domain': str([('id', 'in', created)]),
-            'views': [(self.env.ref('%s' % (xml_id)).id, 'tree')],
-        }
+        result = self.env.ref('%s' % (xml_id)).read()[0]
+        domain = safe_eval(result['domain'])
+        domain.append(('id', 'in', created))
+        return result
 
     def format_rut(self, RUTEmisor=None):
         rut = RUTEmisor.replace('-', '')
@@ -389,8 +385,6 @@ class UploadXMLWizard(models.TransientModel):
             if line_id:
                 if line_id.product_id:
                     return line_id.product_id.id
-            else:
-                return False
         query = False
         product_id = False
         if CdgItem is not None:
@@ -489,20 +483,38 @@ class UploadXMLWizard(models.TransientModel):
             })
         else:
             product_id = self.env['product.product'].browse(product_id)
-            if price_included:
-                price = product_id.supplier_taxes_id.compute_all(
-                                    price,
-                                    self.env.user.company_id.currency_id, 1)\
-                                        ['total_excluded']
-                price_subtotal = product_id.supplier_taxes_id.compute_all(
-                                    price_subtotal,
-                                    self.env.user.company_id.currency_id, 1)\
-                                    ['total_excluded']
-            tax_ids = product_id.supplier_taxes_id.ids
+            fpos = self.env['account.fiscal.position'].browse(fpos_id)
+            account = self.env['account.invoice.line'].get_invoice_line_account(type, product_id, fpos, company_id)
+            tax_ids = product_id.supplier_taxes_id
             if self.type == "ventas":
-                tax_ids = product_id.taxes_id.ids
+                tax_ids = product_id.taxes_id
+            if line.find('IndExe') is None:
+                tax_include = False
+                for t in tax_ids:
+                    if not tax_include:
+                        tax_include = t.price_include
+                if price_included and not tax_include:
+                    base = price
+                    price = 0
+                    base_subtotal = price_subtotal
+                    price_subtotal = 0
+                    for t in tax_ids:
+                        if t.amount > 0:
+                            price += (base / (1 + (t.amount / 100.0)))
+                            price_subtotal += (base_subtotal / (1 + (t.amount / 100.0)))
+                elif not price_included and tax_include:
+                    price = tax_ids.compute_all(
+                                        price,
+                                        self.env.user.company_id.currency_id,
+                                        1)['total_included']
+                    price_subtotal = tax_ids.compute_all(
+                                        price_subtotal,
+                                        self.env.user.company_id.currency_id,
+                                        1)['total_included']
+
             data.update({
-                'invoice_line_tax_ids': [(6, 0, tax_ids)],
+                'account_id': account.id,
+                'invoice_line_tax_ids': [(6, 0, tax_ids.ids)],
                 'uom_id': product_id.uom_id.id,
                 'price_unit': price,
                 'price_subtotal': price_subtotal,
@@ -897,7 +909,7 @@ class UploadXMLWizard(models.TransientModel):
         created = []
         dtes = self._get_dtes()
         for dte in dtes:
-            #try:
+            try:
                 company_id = self.document_id.company_id
                 documento = dte.find("Documento")
                 path_rut = "Encabezado/Receptor/RUTRecep"
@@ -929,8 +941,8 @@ class UploadXMLWizard(models.TransientModel):
                         'sii_document_number': inv.sii_document_number
                     }
                     inv.move_id.write(guardar)
-           # except Exception as e:
-            #    _logger.warning('Error en crear 1 factura con error:  %s' % str(e))
+            except Exception as e:
+                _logger.warning('Error en crear 1 factura con error:  %s' % str(e))
         if created and self.option not in [False, 'upload'] and self.type == 'compras':
             wiz_accept = self.env['sii.dte.validar.wizard'].create(
                 {

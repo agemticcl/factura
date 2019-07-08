@@ -17,8 +17,6 @@ try:
 except:
     _logger.warning('No se ha podido cargar xmltodict')
 
-BC = '''-----BEGIN CERTIFICATE-----\n'''
-EC = '''\n-----END CERTIFICATE-----\n'''
 
 class ValidarDTEWizard(models.TransientModel):
     _name = 'sii.dte.validar.wizard'
@@ -115,7 +113,7 @@ class ValidarDTEWizard(models.TransientModel):
             res['EstadoDTE'] = 2
             res['EstadoDTEGlosa'] = 'DTE Rechazado'
             res['CodRchDsc'] = "-1" #User Reject
-        return { 'ResultadoDTE': res }
+        return {'ResultadoDTE': res }
 
     def _ResultadoDTE(self, Caratula, resultado):
         resp='''<?xml version="1.0" encoding="ISO-8859-1"?>
@@ -318,10 +316,6 @@ class ValidarDTEWizard(models.TransientModel):
             'user_signature_key' module has been installed and enable a digital \
             signature, for you or make the signer to authorize you to use his \
             signature.'''))
-            certp = signature_id.cert.replace(
-                BC,
-                '',
-            ).replace(EC, '').replace('\n', '')
             dict_recept = self._recep(
                 inv,
                 signature_id.subject_serial_number,

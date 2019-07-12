@@ -10,4 +10,4 @@ def migrate(cr, installed_version):
     env = api.Environment(cr, SUPERUSER_ID, {})
     for r in env['account.journal'].search([('type', 'in', ['sale', 'purchase'])]):
         r.set_documents()
-    cr.execute("UPDATE account_invoice set sii_document_number=CAST(reference as BIGINT) where reference ~ '^[0-9]'")
+    cr.execute("UPDATE account_invoice set sii_document_number=CAST(reference as BIGINT) where reference ~ '^[0-9]*$' and reference!=''")

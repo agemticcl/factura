@@ -80,7 +80,8 @@ class AccountInvoiceLine(models.Model):
     _inherit = 'account.invoice.line'
 
     @api.depends('price_unit', 'discount', 'invoice_line_tax_ids', 'quantity',
-        'product_id', 'invoice_id.partner_id', 'invoice_id.currency_id', 'invoice_id.company_id')
+        'product_id', 'invoice_id.partner_id', 'invoice_id.currency_id',
+        'invoice_id.company_id')
     def _compute_price(self):
         for line in self:
             currency = line.invoice_id and line.invoice_id.currency_id or None

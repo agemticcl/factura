@@ -347,7 +347,7 @@ class AccountInvoice(models.Model):
     purchase_to_done = fields.Many2many(
             'purchase.order',
             string="Ordenes de Compra a validar",
-            domain=[('state', 'not in',['done', 'cancel'] )],
+            domain=[('state', 'not in', ['done', 'cancel'])],
             readonly=True,
             states={'draft': [('readonly', False)]},
     )
@@ -388,7 +388,7 @@ class AccountInvoice(models.Model):
         states={'draft': [('readonly', False)]},
     )
 
-    @api.depends('state',  'journal_id', 'date_invoice', 'document_class_id')
+    @api.depends('state', 'journal_id', 'date_invoice', 'document_class_id')
     def _get_sequence_prefix(self):
         for invoice in self:
             if invoice.use_documents and invoice.type in ['out_invoice', 'out_refund']:
@@ -463,7 +463,7 @@ class AccountInvoice(models.Model):
             else:
                 invoice_move_lines[0]['price'] += amount_diff
                 total -= amount_diff
-        if amount_diff_currency !=0:
+        if amount_diff_currency != 0:
             invoice_move_lines[0]['amount_currency'] += amount_diff_currency
             total_currency += amount_diff_currency
         return total, total_currency, invoice_move_lines
@@ -549,7 +549,7 @@ class AccountInvoice(models.Model):
                     for child_tax in tax.children_tax_ids:
                         done_taxes.append(child_tax.id)
                 done_taxes.append(tax.id)
-                if tax_line.amount  > 0:
+                if tax_line.amount > 0:
                     res.append({
                         'invoice_tax_line_id': tax_line.id,
                         'tax_line_id': tax_line.tax_id.id,
@@ -599,7 +599,7 @@ class AccountInvoice(models.Model):
         if monto == 0:
             return 1
         porcentaje = (100.0 * monto) / afecto
-        return 1 + (porcentaje /100.0)
+        return 1 + (porcentaje / 100.0)
 
     def _get_grouped_taxes(self, line, taxes, tax_grouped={}):
         for tax in taxes:
@@ -696,7 +696,7 @@ class AccountInvoice(models.Model):
                 'type': type,
                 'document_class_id': jdc.sii_document_class_id.id,
                 'journal_document_class_id': jdc.id,
-                'referencias':[[0,0, {
+                'referencias': [[0, 0, {
                         'origen':  invoice.sii_document_number,
                         'sii_referencia_TpoDocRef': invoice.document_class_id.id,
                         'sii_referencia_CodRef': mode,
@@ -977,16 +977,17 @@ a VAT."))
                     if not obj_inv.journal_document_class_id.sequence_id:
                         raise UserError(_(
                             'Please define sequence on the journal related documents to this invoice.'))
+                    to_write = {}
                     if not obj_inv.document_class_id:
-                         obj_inv.document_class_id = obj_inv.journal_document_class_id.sii_document_class.id
+                         to_write['document_class_id'] = obj_inv.journal_document_class_id.sii_document_class.id
                     sii_document_number = obj_inv.journal_document_class_id.sequence_id.next_by_id()
-                    prefix = obj_inv.document_class_id.doc_code_prefix or ''
+                    prefix = obj_inv.journal_document_class_id.sii_document_class_id.doc_code_prefix or ''
                     move_name = (prefix + str(sii_document_number)).replace(' ', '')
-                    obj_inv.write(
-                        {
+                    to_write.update({
                             'sii_document_number':  int(sii_document_number),
                             'move_name':  move_name
                         })
+                    obj_inv.write(to_write)
         super(AccountInvoice, self).action_move_create()
         for obj_inv in self:
             invtype = obj_inv.type

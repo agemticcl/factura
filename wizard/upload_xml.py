@@ -277,10 +277,12 @@ class UploadXMLWizard(models.TransientModel):
         return partner
 
     def _create_partner(self, data):
+        partner_id = False
         partner = self._get_data_partner(data)
-        if self.type == 'compras':
-            partner.update({'supplier': True})
-        partner_id = self.env['res.partner'].create(partner)
+        if partner:
+            if self.type == 'compras':
+                partner.update({'supplier': True})
+            partner_id = self.env['res.partner'].create(partner)
         return partner_id
 
     def _default_category(self):
@@ -582,7 +584,7 @@ class UploadXMLWizard(models.TransientModel):
         data['gdr_dtail'] = dr.find("GlosaDR").text if dr.find("GlosaDR") is not None else 'Descuento globla'
         return data
 
-    def _prepare_invoice(self, documento, company_id, journal_document_class_id):
+    def _prepare_invoice(self, documento, company_id, journal_id):
         type = 'Emisor'
         rut_path = 'RUTEmisor'
         if self.type == 'ventas':
@@ -614,16 +616,16 @@ class UploadXMLWizard(models.TransientModel):
             if self.type == "ventas":
                 invoice["type"] = "out_refund"
         if partner_id:
-            account_id = partner_id.property_account_payable_id.id or journal_document_class_id.journal_id.default_debit_account_id.id
+            account_id = partner_id.property_account_payable_id.id or journal_id.default_debit_account_id.id
             if invoice['type'] in ('out_invoice', 'in_refund'):
-                account_id = partner_id.property_account_receivable_id.id or journal_document_class_id.journal_id.default_credit_account_id.id
+                account_id = partner_id.property_account_receivable_id.id or journal_id.default_credit_account_id.id
             fpos = self.env['account.fiscal.position'].get_fiscal_position(partner_id.id, delivery_id=partner_id.address_get(['delivery'])['delivery'])
             invoice.update(
-            {
-                'fiscal_position': fpos.id if fpos else False,
-                'account_id': account_id,
-                'partner_id': partner_id.id,
-            })
+                {
+                    'fiscal_position': fpos.id if fpos else False,
+                    'account_id': account_id,
+                    'partner_id': partner_id.id,
+                })
             partner_id = partner_id.id
         try:
             name = self.filename.decode('ISO-8859-1').encode('UTF-8')
@@ -646,7 +648,7 @@ class UploadXMLWizard(models.TransientModel):
             'date_invoice': FchEmis,
             'partner_id': partner_id,
             'company_id': company_id.id,
-            'journal_id': journal_document_class_id.journal_id.id,
+            'journal_id': journal_id.id,
             #'sii_xml_request': xml_envio.id,
             'sii_xml_dte':  "<DTE>%s</DTE>" % etree.tostring(documento),
             'sii_barcode': ted_string.decode(),
@@ -660,13 +662,17 @@ class UploadXMLWizard(models.TransientModel):
                     'global_descuentos_recargos': drs,
                 })
         Folio = IdDoc.find("Folio").text
+        dc_id= self.env['sii.document_class'].search([
+                    ('sii_code', '=', IdDoc.find('TipoDTE').text)
+            ])
         invoice.update({
                 'sii_document_number': Folio,
-                'document_class_id': journal_document_class_id.id,
+                'document_class_id': dc_id.id,
+                'document_class_id': dc_id.id,
             })
         if self.type == 'ventas':
             invoice.update({
-                'move_name': '%s%s' % (journal_document_class_id.sii_document_class_id.doc_code_prefix, Folio),
+                'move_name': '%s%s' % (dc_id.doc_code_prefix, Folio),
             })
         else:
             RznSoc = Emisor.find('RznSoc')
@@ -676,24 +682,28 @@ class UploadXMLWizard(models.TransientModel):
                 'number': Folio,
                 'date': FchEmis,
                 'new_partner': RUT + ' ' + RznSoc.text,
-                'sii_document_class_id': journal_document_class_id.sii_document_class_id.id,
                 'amount': Encabezado.find('Totales/MntTotal').text,
             })
         return invoice
 
     def _get_journal(self, sii_code, company_id):
+        dc_id = self.env['sii.document_class'].search([
+                            ('sii_code', '=', sii_code)
+                            ])
         type = 'purchase'
         if self.type == 'ventas':
             type = 'sale'
-        journal_sii = self.env['account.journal.sii_document_class'].search(
+        journal_id = self.env['account.journal'].search(
             [
-                ('sii_document_class_id.sii_code', '=', sii_code),
-                ('journal_id.type', '=', type),
-                ('journal_id.company_id', '=', company_id.id)
+                ('document_class_ids', '=', dc_id.id),
+                ('type', '=', type),
+                ('company_id', '=', company_id.id),
             ],
             limit=1,
         )
-        return journal_sii
+        if not journal_id:
+            raise UserError('No existe Diario para el tipo de documento %s, por favor añada uno primero, o ignore el documento' % dc_id.name.encode('UTF-8'))
+        return journal_id
 
     def _get_invoice_lines(self, documento, document_id, invoice_type, fpos,
                            price_included, company_id):
@@ -709,25 +719,20 @@ class UploadXMLWizard(models.TransientModel):
         Encabezado = documento.find("Encabezado")
         IdDoc = Encabezado.find("IdDoc")
         price_included = Encabezado.find("MntBruto")
-        journal_document_class_id = self._get_journal(
+        journal_id = self._get_journal(
                     IdDoc.find("TipoDTE").text,
                     company_id)
-        if not journal_document_class_id:
-            sii_document_class = self.env['sii.document_class'].search([
-                            ('sii_code', '=', IdDoc.find("TipoDTE").text)
-                            ])
-            raise UserError('No existe Diario para el tipo de documento %s, por favor añada uno primero, o ignore el documento' % sii_document_class.name.encode('UTF-8'))
         data = self._prepare_invoice(
                     documento,
                     company_id,
-                    journal_document_class_id)
+                    journal_id)
         lines = [(5,)]
         document_id = self._dte_exist(documento)
         lines.extend(self._get_invoice_lines(
                     documento,
                     document_id,
                     data['type'],
-                    data['fiscal_position'],
+                    data.get('fiscal_position', False),
                     price_included,
                     company_id))
         product_id = self.env['product.product'].search([
@@ -843,7 +848,7 @@ class UploadXMLWizard(models.TransientModel):
         return self.env['mail.message.dte.document'].search(
             [
                 ('number', '=', IdDoc.find("Folio").text),
-                ('sii_document_class_id.sii_code', '=', IdDoc.find("TipoDTE").text),
+                ('document_class_id.sii_code', '=', IdDoc.find("TipoDTE").text),
                 '|',
                 ('partner_id.vat', '=', self.format_rut(Emisor.find("RUTEmisor").text)),
                 ('new_partner', '=', new_partner),
@@ -901,7 +906,7 @@ class UploadXMLWizard(models.TransientModel):
                     )
                     created.append(pre.id)
             except Exception as e:
-                _logger.warning('Error en 1 factura con error:  %s' % str(e))
+                _logger.warning('Error en 1 pre con error:  %s' % str(e))
         return created
 
     def do_create_inv(self):

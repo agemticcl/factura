@@ -3,11 +3,10 @@ from odoo import models, fields, api
 from odoo.tools.safe_eval import safe_eval
 from odoo.tools.translate import _
 from odoo.exceptions import UserError
-import logging
 import base64
 from facturacion_electronica import facturacion_electronica as fe
 from lxml import etree
-
+import logging
 _logger = logging.getLogger(__name__)
 
 
@@ -193,7 +192,7 @@ class UploadXMLWizard(models.TransientModel):
                     {
                         "IdRespuesta": IdRespuesta,
                         "RutResponde": self.env['account.invoice'].format_vat(
-                                        self.env.user.partner_id.vat),
+                                        company_id.vat),
                         "NmbContacto": self.env.user.partner_id.name,
                         "FonoContacto": self.env.user.partner_id.phone,
                         "MailContacto": self.env.user.partner_id.email,

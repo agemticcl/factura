@@ -378,6 +378,7 @@ class UploadXMLWizard(models.TransientModel):
             line_id = self.env['mail.message.dte.document.line'].search(
                 [
                     ('sequence', '=', line.find('NroLinDet').text),
+                    ('document_id', '=', document_id.id),
                 ]
             )
             if line_id:

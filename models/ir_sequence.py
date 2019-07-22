@@ -52,8 +52,7 @@ class IRSequence(models.Model):
             compute="_qty_available"
         )
     forced_by_caf = fields.Boolean(
-            string="Forced By CAF",
-            default=True,
+            string="Forced By CAF"
         )
 
     def _get_folio(self):

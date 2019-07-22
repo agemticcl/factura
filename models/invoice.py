@@ -981,7 +981,7 @@ a VAT."))
                             'Please define sequence on the journal related documents to this invoice.'))
                     to_write = {}
                     if not obj_inv.document_class_id:
-                         to_write['document_class_id'] = obj_inv.journal_document_class_id.sii_document_class.id
+                         to_write['document_class_id'] = obj_inv.journal_document_class_id.sii_document_class_id.id
                     sii_document_number = obj_inv.journal_document_class_id.sequence_id.next_by_id()
                     prefix = obj_inv.journal_document_class_id.sii_document_class_id.doc_code_prefix or ''
                     move_name = (prefix + str(sii_document_number)).replace(' ', '')

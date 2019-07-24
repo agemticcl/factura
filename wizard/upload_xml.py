@@ -104,10 +104,15 @@ class UploadXMLWizard(models.TransientModel):
             target_model = 'purchase.order'
         if ret:
             return created
-        result = self.env.ref('%s' % (xml_id)).read()[0]
-        domain = safe_eval(result['domain'])
-        domain.append(('id', 'in', created))
-        return result
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('List of Results'),
+            'view_type': 'form' if self.dte_id else 'tree',
+            'view_mode': 'tree',
+            'res_model': target_model,
+            'domain': str([('id', 'in', created)]),
+            'views': [(self.env.ref("%s" % xml_id).id, 'tree')],
+        }
 
     def format_rut(self, RUTEmisor=None):
         rut = RUTEmisor.replace('-', '')

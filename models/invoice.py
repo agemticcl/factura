@@ -1444,16 +1444,23 @@ version="1.0">
             Receptor['CorreoRecep'] = self.commercial_partner_id.dte_email or self.partner_id.dte_email or self.commercial_partner_id.email or self.partner_id.email
         street_recep = (self.partner_id.street or self.commercial_partner_id.street or False)
         if not street_recep and not self._es_boleta() and not self._nc_boleta():
+        # or self.indicador_servicio in [1, 2]:
             raise UserError('Debe Ingresar dirección del cliente')
         street2_recep = (self.partner_id.street2 or self.commercial_partner_id.street2 or False)
-        Receptor['DirRecep'] = self._acortar_str(street_recep + (' ' + street2_recep if street2_recep else ''), 70)
-        Receptor['CmnaRecep'] = self.partner_id.city_id.name or self.commercial_partner_id.city_id.name
-        if not Receptor['CmnaRecep'] and not self._es_boleta() and not self._nc_boleta():
+        if street_recep or street2_recep:
+            Receptor['DirRecep'] = self._acortar_str(street_recep + (' ' + street2_recep if street2_recep else ''), 70)
+        cmna_recep = self.partner_id.city_id.name or self.commercial_partner_id.city_id.name
+        if not cmna_recep and not self._es_boleta() and not self._nc_boleta():
             raise UserError('Debe Ingresar Comuna del cliente')
-        Receptor['CiudadRecep'] = self.partner_id.city or self.commercial_partner_id.city
+        else:
+            Receptor['CmnaRecep'] = cmna_recep
+        ciudad_recep = self.partner_id.city or self.commercial_partner_id.city
+        if ciudad_recep:
+            Receptor['CiudadRecep'] = ciudad_recep
         return Receptor
 
-    def _totales_otra_moneda(self, currency_id, MntExe, MntNeto, IVA, TasaIVA, ImptoReten, MntTotal=0, MntBase=0):
+    def _totales_otra_moneda(self, currency_id, MntExe, MntNeto, IVA, TasaIVA,
+                             ImptoReten, MntTotal=0, MntBase=0):
         Totales = collections.OrderedDict()
         Totales['TpoMoneda'] = self._acortar_str(currency_id.abreviatura, 15)
         Totales['TpoCambio'] = currency_id.rate

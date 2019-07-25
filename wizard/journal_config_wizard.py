@@ -23,8 +23,7 @@ class AccountJournalDocumentConfig(models.TransientModel):
             string='Register Electronic Documents?',
             default=True,
             help="""
-This option allows you to register electronic documents (DTEs) issued by MiPyme SII Portal, Third parties services, or by
-Odoo itself (to register  DTEs issued by Odoo l10n_cl_dte/caf modules are needed.
+This option allows you to register electronic documents (DTEs).
 """)
     non_dte_register = fields.Boolean(
             'Register Manual Documents?')

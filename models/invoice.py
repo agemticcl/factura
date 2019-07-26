@@ -1496,7 +1496,8 @@ version="1.0">
         #Totales['VlrPagar']
         return Totales
 
-    def _totales_normal(self, currency_id, MntExe, MntNeto, IVA, TasaIVA, ImptoReten, MntTotal=0, MntBase=0):
+    def _totales_normal(self, currency_id, MntExe, MntNeto, IVA, TasaIVA,
+                        ImptoReten, MntTotal=0, MntBase=0):
         Totales = collections.OrderedDict()
         if MntNeto > 0:
             if currency_id != self.currency_id:
@@ -1546,13 +1547,13 @@ version="1.0">
             if not self._es_boleta() or not taxInclude:
                 IVA = False
                 for t in self.tax_line_ids:
-                    if t.tax_id.sii_code in [ 14, 15 ]:
+                    if t.tax_id.sii_code in [14, 15]:
                         IVA = t
-                    elif t.tax_id.sii_code in [ 15, 17, 18, 19, 27, 271, 26 ]:
+                    elif t.tax_id.sii_code in [15, 17, 18, 19, 27, 271, 26]:
                         OtrosImp.append(t)
-                    if t.tax_id.sii_code in [ 14, 15 ]:
+                    if t.tax_id.sii_code in [14, 15]:
                         MntNeto += t.base
-                    if t.tax_id.sii_code in [ 17 ]:
+                    if t.tax_id.sii_code in [17]:
                         MntBase += IVA.base # @TODO Buscar forma de calcular la base para faenamiento
         if self.amount_tax == 0 and MntExe > 0 and not self._es_exento():
             raise UserError("Debe ir almenos un producto afecto")
@@ -1591,9 +1592,14 @@ version="1.0">
         if self.currency_id != currency_base:
             another_currency_id = self.currency_id
         MntExe, MntNeto, IVA, TasaIVA, ImptoReten, MntTotal, MntBase = self._totales(MntExe, no_product, taxInclude)
-        Encabezado['Totales'] = self._totales_normal(currency_base, MntExe, MntNeto, IVA, TasaIVA, ImptoReten, MntTotal, MntBase)
+        Encabezado['Totales'] = self._totales_normal(currency_base, MntExe,
+                                                     MntNeto, IVA, TasaIVA,
+                                                     ImptoReten, MntTotal,
+                                                     MntBase)
         if another_currency_id:
-            Encabezado['OtraMoneda'] = self._totales_otra_moneda(another_currency_id, MntExe, MntNeto, IVA, TasaIVA, ImptoReten, MntTotal, MntBase)
+            Encabezado['OtraMoneda'] = self._totales_otra_moneda(
+                            another_currency_id, MntExe, MntNeto, IVA, TasaIVA,
+                            ImptoReten, MntTotal, MntBase)
         return Encabezado
 
     def _validaciones_caf(self, caf):
@@ -1623,25 +1629,29 @@ version="1.0">
         if no_product:
             result['TED']['DD']['MNT'] = 0
         for line in self.invoice_line_ids:
-            result['TED']['DD']['IT1'] = self._acortar_str(line.product_id.name,40)
+            result['TED']['DD']['IT1'] = self._acortar_str(
+                            line.product_id.name,40)
             if line.product_id.default_code:
-                result['TED']['DD']['IT1'] = self._acortar_str(line.product_id.name.replace('['+line.product_id.default_code+'] ',''),40)
+                result['TED']['DD']['IT1'] = self._acortar_str(
+                                    line.product_id.name.replace('['+line.product_id.default_code+'] ',''),40)
             break
-        resultcaf = self.journal_document_class_id.sequence_id.get_caf_file(self.get_folio())
+        resultcaf = self.journal_document_class_id.sequence_id.get_caf_file(
+                    self.get_folio())
         result['TED']['DD']['CAF'] = resultcaf['AUTORIZACION']['CAF']
         dte = result['TED']['DD']
-        timestamp = self._validaciones_caf(resultcaf['AUTORIZACION']['CAF']['DA'])
+        timestamp = self._validaciones_caf(
+                    resultcaf['AUTORIZACION']['CAF']['DA'])
         dte['TSTED'] = timestamp
         dicttoxml.set_debug(False)
         ddxml = '<DD>'+dicttoxml.dicttoxml(
             dte, root=False, attr_type=False).decode().replace(
-            '<key name="@version">1.0</key>','',1).replace(
-            '><key name="@version">1.0</key>',' version="1.0">',1).replace(
+            '<key name="@version">1.0</key>', '', 1).replace(
+            '><key name="@version">1.0</key>', ' version="1.0">', 1).replace(
             '><key name="@algoritmo">SHA1withRSA</key>',
             ' algoritmo="SHA1withRSA">').replace(
-            '<key name="#text">','').replace(
-            '</key>','').replace('<CAF>','<CAF version="1.0">')+'</DD>'
-        keypriv = resultcaf['AUTORIZACION']['RSASK'].replace('\t','')
+            '<key name="#text">', '').replace(
+            '</key>', '').replace('<CAF>', '<CAF version="1.0">') + '</DD>'
+        keypriv = resultcaf['AUTORIZACION']['RSASK'].replace('\t', '')
         root = etree.XML( ddxml )
         ddxml = etree.tostring(root)
         signature_id = self.env.user.get_digital_signature(self.company_id)
@@ -1669,7 +1679,8 @@ version="1.0">
         invoice_lines = []
         no_product = False
         MntExe = 0
-        currency_base = self.env.ref('base.CLP').with_context(date=self.date_invoice)
+        currency_base = self.env.ref('base.CLP').with_context(
+                    date=self.date_invoice)
         currency_id = False
         if self.currency_id != currency_base:
             currency_id = self.currency_id.with_context(date=self.date_invoice)
@@ -1692,10 +1703,13 @@ version="1.0">
             #   lines['ItemEspectaculo'] =
 #            if self._es_boleta():
 #                lines['RUTMandante']
-            lines['NmbItem'] = self._acortar_str(line.product_id.name,80) #
+            lines['NmbItem'] = self._acortar_str(line.product_id.name, 80) #
             lines['DscItem'] = self._acortar_str(line.name, 1000) #descripción más extenza
             if line.product_id.default_code:
-                lines['NmbItem'] = self._acortar_str(line.product_id.name.replace('['+line.product_id.default_code+'] ',''),80)
+                lines['NmbItem'] = self._acortar_str(
+                                    line.product_id.name.replace(
+                                    '[%s] ' % line.product_id.default_code,
+                                    ''), 80)
             #lines['InfoTicket']
             qty = round(line.quantity, 4)
             if not no_product:
@@ -1811,7 +1825,7 @@ version="1.0">
                 if self._es_boleta():
                     ref_line['CodVndor'] = self.seler_id.id
                     ref_lines['CodCaja'] = self.journal_id.point_of_sale_id.name
-                ref_lines.extend([{'Referencia':ref_line}])
+                ref_lines.extend([{'Referencia': ref_line}])
                 lin_ref += 1
         dte['item'] = invoice_lines['invoice_lines']
         if self.global_descuentos_recargos:
@@ -1825,13 +1839,13 @@ version="1.0">
         dte[(tpo_dte + ' ID')]['TEDd'] = ''
         xml = dicttoxml.dicttoxml(
             dte, root=False, attr_type=False).decode() \
-            .replace('<item >','').replace('<item>','').replace('</item>','')\
-            .replace('<reflines>','').replace('</reflines>','')\
-            .replace('<TEDd>','').replace('</TEDd>','')\
+            .replace('<item >', '').replace('<item>', '').replace('</item>', '')\
+            .replace('<reflines>', '').replace('</reflines>', '')\
+            .replace('<TEDd>', '').replace('</TEDd>', '')\
             .replace('</'+ tpo_dte + '_ID>','\n'+ted+'\n</'+ tpo_dte + '_ID>')\
-            .replace('<drlines>','').replace('</drlines>','')\
-            .replace('<item_ret>','').replace('</item_ret>','')\
-            .replace('<item_ret_otr>','').replace('</item_ret_otr>','')
+            .replace('<drlines>', '').replace('</drlines>', '')\
+            .replace('<item_ret>', '').replace('</item_ret>', '')\
+            .replace('<item_ret_otr>', '').replace('</item_ret_otr>', '')
         return xml
 
     def _tpo_dte(self):
@@ -1848,7 +1862,7 @@ version="1.0">
         dte = collections.OrderedDict()
         dte[(tpo_dte + ' ID')] = self._dte(n_atencion)
         xml = self._dte_to_xml(dte, tpo_dte)
-        root = etree.XML( xml )
+        root = etree.XML(xml)
         xml_pret = etree.tostring(
                 root,
                 pretty_print=True
@@ -2003,7 +2017,8 @@ version="1.0">
                 r.sii_result = "Proceso"
                 continue
             if r.sii_message:
-                r.sii_result = r.process_response_xml(xmltodict.parse(r.sii_message))
+                r.sii_result = r.process_response_xml(
+                                    xmltodict.parse(r.sii_message))
                 continue
             if r.sii_xml_request.state == 'NoEnviado':
                 r.sii_result = 'EnCola'
@@ -2059,17 +2074,33 @@ version="1.0">
                 _logger.warning("Error al obtener DTE Status: %s" %str(e))
         self.get_sii_result()
         for r in self:
+            mess = False
             if r.sii_result == 'Rechazado':
+                mess = {
+                            'title': "Documento Rechazado",
+                            'message': "%s" % r.name,
+                            'type': 'dte_notif',
+                        }
+            if r.sii_result == 'Anulado':
+                r.canceled = True
+                try:
+                    r.action_invoice_cancel()
+                except:
+                    _logger.warning("Error al cancelar Documento")
+                mess = {
+                            'title': "Documento Anulado",
+                            'message': "%s" % r.name,
+                            'type': 'dte_notif',
+                        }
+            if mess:
                 self.env['bus.bus'].sendone((self._cr.dbname,
                                             'account.invoice',
-                                            self.env.user.partner_id.id),
-                                            {
-                                                'title': "Documento Rechazado",
-                                                'message': "%s" % r.name,
-                                                'type': 'dte_notif',
-                                            })
+                                            r.user_id.partner_id.id),
+                                            mess)
 
-    def set_dte_claim(self, rut_emisor=False, company_id=False, sii_document_number=False, document_class_id=False, claim=False):
+    def set_dte_claim(self, rut_emisor=False, company_id=False,
+                      sii_document_number=False, document_class_id=False,
+                      claim=False):
         rut_emisor = rut_emisor or self.format_vat(self.company_id.partner_id.vat)
         company_id = company_id or self.company_id
         sii_document_number = sii_document_number
@@ -2079,7 +2110,7 @@ version="1.0">
         url = claim_url[company_id.dte_service_provider] + '?wsdl'
         _server = Client(
             url,
-            headers= {
+            headers={
                 'Cookie': 'TOKEN=' + token,
                 },
         )
@@ -2106,7 +2137,7 @@ version="1.0">
         url = claim_url[self.company_id.dte_service_provider] + '?wsdl'
         _server = Client(
             url,
-            headers= {
+            headers={
                 'Cookie': 'TOKEN=' + token,
                 },
         )
@@ -2209,7 +2240,9 @@ version="1.0">
             string_state = ""
             if self.state == 'draft':
                 string_state = "en borrador "
-            report_string = "%s %s %s" % (self.document_class_id.name, string_state, self.sii_document_number or '')
+            report_string = "%s %s %s" % (self.document_class_id.name,
+                                          string_state,
+                                          self.sii_document_number or '')
         else:
             report_string = super(AccountInvoice, self)._get_printed_report_name()
         return report_string

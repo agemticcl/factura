@@ -769,9 +769,22 @@ class AccountInvoice(models.Model):
         return recs.name_get()
 
     def action_invoice_cancel(self):
-        if self.sii_result not in [False, 'draft', 'NoEnviado', 'Rechazado', 'Anulado']:
-            raise ("No se puede Cancelar un documento validamente enviado y aceptado en el SII")
+        for r in self:
+            if r.sii_xml_request and r.sii_result not in [False, 'draft',
+                                                          'NoEnviado',
+                                                          'Anulado']:
+                raise UserError(
+                            _('You can not cancel a valid document on SII'))
         return super(AccountInvoice, self).action_invoice_cancel()
+
+    @api.multi
+    def unlink(self):
+        for r in self:
+            if r.sii_xml_request and r.sii_result in ['Aceptado', 'Reparo',
+                                                      'Rechazado']:
+                raise UserError(
+                            _('You can not delete a valid document on SII'))
+        return super(AccountInvoice, self).unlink()
 
     def _buscarTaxEquivalente(self, tax):
         tax_n = self.env['account.tax'].search(

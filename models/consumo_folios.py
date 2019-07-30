@@ -661,11 +661,11 @@ version="1.0">
         xml  = self.create_template_env(cf)
         root = etree.XML( xml )
         xml_pret = etree.tostring(root, pretty_print=True).decode()\
-                .replace('<item>','\n').replace('</item>', '')\
-                .replace('<itemNoRec>','').replace('</itemNoRec>', '\n')\
-                .replace('<itemOtrosImp>','').replace('</itemOtrosImp>', '\n')\
-                .replace('<itemUtilizados>','').replace('</itemUtilizados>', '\n')\
-                .replace('<itemAnulados>','').replace('</itemAnulados>', '\n')
+                .replace('<item>', '\n').replace('</item>', '')\
+                .replace('<itemNoRec>', '').replace('</itemNoRec>', '\n')\
+                .replace('<itemOtrosImp>', '').replace('</itemOtrosImp>', '\n')\
+                .replace('<itemUtilizados>', '').replace('</itemUtilizados>', '\n')\
+                .replace('<itemAnulados>', '').replace('</itemAnulados>', '\n')
         for TpoDoc in TpoDocs:
         	xml_pret = xml_pret.replace('<key name="'+str(TpoDoc)+'_folios">','').replace('</key>','\n').replace('<key name="'+str(TpoDoc)+'_folios"/>','\n')
         envio_dte = self.env['account.invoice'].sign_full_xml(
@@ -690,6 +690,7 @@ version="1.0">
             self._validar()
         self.env['sii.cola_envio'].create(
                     {
+                        'company_id': self.company_id.id,
                         'doc_ids': [self.id],
                         'model': 'account.move.consumo_folios',
                         'user_id': self.env.user.id,

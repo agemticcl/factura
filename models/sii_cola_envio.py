@@ -42,6 +42,10 @@ class ColaEnvio(models.Model):
             string="Auto Enviar Email",
             default=False,
         )
+    company_id = fields.Many2one(
+            'res.company',
+            string="Compañia",
+    )
 
     def enviar_email(self, doc):
         doc.send_exchange()
@@ -60,9 +64,13 @@ class ColaEnvio(models.Model):
         if not self.user_id.active:
             _logger.warning("¡Usuario %s desactivado!" % self.user_id.name)
             return
-        docs = self.env[self.model].sudo(self.user_id.id).browse(ast.literal_eval(self.doc_ids))
+        docs = self.env[self.model].with_context(
+                    user=self.user_id.id,
+                    company_id=self.company_id.id
+                    ).browse(ast.literal_eval(self.doc_ids))
         if self.tipo_trabajo == 'pasivo':
-            if docs[0].sii_xml_request and docs[0].sii_xml_request.state in ['Aceptado', 'Enviado', 'Rechazado', 'Anulado']:
+            if docs[0].sii_xml_request and docs[0].sii_xml_request.state in [
+                            'Aceptado', 'Enviado', 'Rechazado', 'Anulado']:
                 self.unlink()
                 return
             if self.date_time and datetime.now() >= datetime.strptime(self.date_time, DTF):

@@ -1123,13 +1123,14 @@ a VAT."))
                     inv._timbrar()
                     tiempo_pasivo = (datetime.now() + timedelta(hours=int(self.env['ir.config_parameter'].sudo().get_param('account.auto_send_dte', default=12))))
                     self.env['sii.cola_envio'].create({
-                                                'doc_ids': [inv.id],
-                                                'model': 'account.invoice',
-                                                'user_id': self.env.uid,
-                                                'tipo_trabajo': 'pasivo',
-                                                'date_time': tiempo_pasivo,
-                                                'send_email': False if inv.company_id.dte_service_provider=='SIICERT' or not self.env['ir.config_parameter'].sudo().get_param('account.auto_send_email', default=True) else True,
-                                                })
+                                    'company_id': inv.company_id.id,
+                                    'doc_ids': [inv.id],
+                                    'model': 'account.invoice',
+                                    'user_id': self.env.uid,
+                                    'tipo_trabajo': 'pasivo',
+                                    'date_time': tiempo_pasivo,
+                                    'send_email': False if inv.company_id.dte_service_provider=='SIICERT' or not self.env['ir.config_parameter'].sudo().get_param('account.auto_send_email', default=True) else True,
+                                    })
             if inv.purchase_to_done:
                 for ptd in inv.purchase_to_done:
                     ptd.write({'state': 'done'})
@@ -1357,13 +1358,14 @@ version="1.0">
                 self.browse(ids).do_dte_send(n_atencion)
                 return
             self.env['sii.cola_envio'].create({
-                                    'doc_ids': ids,
-                                    'model':'account.invoice',
-                                    'user_id':self.env.user.id,
-                                    'tipo_trabajo': 'envio',
-                                    'n_atencion': n_atencion,
-                                    'send_email': False if self[0].company_id.dte_service_provider=='SIICERT' or not self.env['ir.config_parameter'].sudo().get_param('account.auto_send_email', default=True) else True,
-                                    })
+                                'company_id': self[0].company_id.id,
+                                'doc_ids': ids,
+                                'model': 'account.invoice',
+                                'user_id': self.env.user.id,
+                                'tipo_trabajo': 'envio',
+                                'n_atencion': n_atencion,
+                                'send_email': False if self[0].company_id.dte_service_provider=='SIICERT' or not self.env['ir.config_parameter'].sudo().get_param('account.auto_send_email', default=True) else True,
+                                })
 
     @api.multi
     def _es_boleta(self):

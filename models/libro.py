@@ -989,12 +989,12 @@ version="1.0">
                 env = 'libro_boleta'
         root = etree.XML( xml )
         xml_pret = etree.tostring(root, pretty_print=True).decode('iso-8859-1')\
-                .replace('<item/>','\n')\
-                .replace('<item>','\n').replace('</item>','')\
-                .replace('<itemNoRec>','').replace('</itemNoRec>','\n')\
-                .replace('<itemOtrosImp>','').replace('</itemOtrosImp>','\n')\
-                .replace('<item_refs>','').replace('</item_refs>','\n')\
-                .replace('_no_rec','')
+                .replace('<item/>', '\n')\
+                .replace('<item>', '\n').replace('</item>', '')\
+                .replace('<itemNoRec>', '').replace('</itemNoRec>', '\n')\
+                .replace('<itemOtrosImp>', '').replace('</itemOtrosImp>', '\n')\
+                .replace('<item_refs>', '').replace('</item_refs>', '\n')\
+                .replace('_no_rec', '')
         envio_dte = self.sign_full_xml(
             xml_pret,
             doc_id,
@@ -1015,6 +1015,7 @@ version="1.0">
             self._validar()
         self.env['sii.cola_envio'].create(
                     {
+                        'company_id': self.company_id.id,
                         'doc_ids': [self.id],
                         'model': 'account.move.book',
                         'user_id': self.env.user.id,

@@ -67,7 +67,7 @@ class apicaf(models.TransientModel):
         context = dict(self._context or {})
         for j in journal_obj.browse(context.get('active_ids')):
             self.documentos += j.journal_document_class_ids
-            self.company_id = j.company_id.id            
+            self.company_id = j.company_id.id
 
     documentos = fields.Many2many(
             'account.journal.sii_document_class',
@@ -178,7 +178,7 @@ class apicaf(models.TransientModel):
         data = json.loads(resp.data.decode('ISO-8859-1'))
         self.folios_disp = data['folios_disp']
         self.max_autor = data['max_autor']
-        self.cant_doctos = data['max_autor']
+        self.cant_doctos = data['max_autor'] if data['max_autor'] >= 0 else 0
         self.etapa = data['etapa']
 
     @api.multi

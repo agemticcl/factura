@@ -76,7 +76,7 @@ www.sii.cl'''.format(folio)
                     expiration_caf = date(int(caffile.expiration_date[:4]),
                                           int(caffile.expiration_date[5:7]),
                                           int(caffile.expiration_date[8:10])
-                                         )
+                                          )
                     if date(int(timestamp[:4]),
                             int(timestamp[5:7]),
                             int(timestamp[8:10])) > expiration_caf:
@@ -85,7 +85,8 @@ www.sii.cl'''.format(folio)
                 alert_msg = caffile.check_nivel(folio)
                 #alert_msg += caffile.check_expiracion()
                 if alert_msg != '':
-                    self.env['bus.bus'].sendone((self._cr.dbname,
+                    self.env['bus.bus'].sendone((
+                                            self._cr.dbname,
                                             'dte.caf',
                                             self.env.user.partner_id.id),
                                             {

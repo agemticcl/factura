@@ -112,6 +112,7 @@ class UploadXMLWizard(models.TransientModel):
             'res_model': target_model,
             'domain': str([('id', 'in', created)]),
             'views': [(self.env.ref("%s" % xml_id).id, 'tree')],
+            'target': 'current',
         }
 
     def format_rut(self, RUTEmisor=None):
@@ -182,11 +183,13 @@ class UploadXMLWizard(models.TransientModel):
 
     def do_receipt_deliver(self):
         envio = self._read_xml('etree')
-        if envio.find('SetDTE') is None or envio.find('SetDTE/Caratula') is None:
+        if envio.find('SetDTE') is None or envio.find(
+                    'SetDTE/Caratula') is None:
             return True
         company_id = self.env['res.company'].search(
             [
-                ('vat', '=', self.format_rut(envio.find('SetDTE/Caratula/RutReceptor').text))
+                ('vat', '=', self.format_rut(envio.find(
+                                    'SetDTE/Caratula/RutReceptor').text))
             ],
             limit=1)
         IdRespuesta = self.env.ref('l10n_cl_fe.response_sequence').next_by_id()
@@ -235,11 +238,12 @@ class UploadXMLWizard(models.TransientModel):
         type = "Emis"
         if self.type == 'ventas':
             type = "Recep"
-            if data.find('RUT%s' % type).text in [False, '66666666-6', '00000000-0']:
+            if data.find('RUT%s' % type).text in [False, '66666666-6',
+                                                  '00000000-0']:
                 return self.env.ref('l10n_cl_fe.par_cfa')
         el = data.find('Giro%s' % type)
         if el is None:
-             giro = 'Boleta'
+            giro = 'Boleta'
         else:
             giro = el.text
         giro_id = self.env['sii.activity.description'].search([

@@ -96,9 +96,10 @@ class apicaf(models.TransientModel):
             required=True,
         )
     folios_disp = fields.Integer(
-            string="Folios disponibles SIN USAR",
+            string="Folios Emitidos SIN USAR",
             default=0,
             readonly=True,
+            help='Debe Revisar si ha tenido algún salto de folios, si piensa que ya no debiera tener folios disponibles o puede que no se hayan enviado al SII o estén recahzados, por loque debe revisar el estado de facturas lo antes posible',
         )
     max_autor = fields.Integer(
             string="Cantidad Máxima Autorizada para el Documento",
@@ -194,6 +195,9 @@ class apicaf(models.TransientModel):
 
     @api.multi
     def obtener_caf(self):
+        if (self.max_autor > -1 and self.cant_doctos > self.max_autor) or\
+        self.cant_doctos < 1:
+            raise UserError("Debe Ingresar una cantidad mayor que 0 hasta la cantidad máxima autorizada")
         ICPSudo = self.env['ir.config_parameter'].sudo()
         url = ICPSudo.get_param('dte.url_apicaf')
         token = ICPSudo.get_param('dte.token_apicaf')

@@ -2,7 +2,7 @@
 from odoo import fields, models, api
 from odoo.tools.translate import _
 import ast
-from datetime import datetime
+from datetime import datetime, timedelta
 from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT as DTF
 import logging
 _logger = logging.getLogger(__name__)
@@ -24,7 +24,8 @@ class ColaEnvio(models.Model):
             [
                     ('pasivo', 'pasivo'),
                     ('envio', 'Envío'),
-                    ('consulta', 'Consulta')
+                    ('consulta', 'Consulta'),
+                    ('persistencia', 'Persistencia Respuesta'),
             ],
             string="Tipo de trabajo",
         )
@@ -68,12 +69,38 @@ class ColaEnvio(models.Model):
                     user=self.user_id.id,
                     company_id=self.company_id.id
                     ).browse(ast.literal_eval(self.doc_ids))
+        if self.tipo_trabajo == 'persistencia':
+            if self.date_time and datetime.now() >= datetime.strptime(
+                            self.date_time, DTF):
+                for doc in docs:
+                    if self.env['sii.respuesta.cliente'].search([
+                        ('id', 'in', doc.respuesta_ids.ids),
+                        ('company_id', '=', self.company_id.id),
+                        ('recep_envio', '=', 'no_revisado'),
+                        ('type', '=', 'RecepcionEnvio'),
+                    ]):
+                        self.enviar_email(doc)
+                    else:
+                        docs -= doc
+                if not docs:
+                    self.unlink()
+                else:
+                    persistente = self.env[
+                                    'ir.config_parameter'].sudo().get_param(
+                                            'account.auto_send_persistencia',
+                                            default=24)
+                    self.date_time = (datetime.now() + timedelta(
+                                        hours=int(persistente)
+                                    ))
+
+            return
         if self.tipo_trabajo == 'pasivo':
             if docs[0].sii_xml_request and docs[0].sii_xml_request.state in [
                             'Aceptado', 'Enviado', 'Rechazado', 'Anulado']:
                 self.unlink()
                 return
-            if self.date_time and datetime.now() >= datetime.strptime(self.date_time, DTF):
+            if self.date_time and datetime.now() >= datetime.strptime(
+                            self.date_time, DTF):
                 try:
                     envio_id = docs.do_dte_send(self.n_atencion)
                     if envio_id.sii_send_ident:
@@ -87,6 +114,15 @@ class ColaEnvio(models.Model):
             if self.send_email and docs[0].sii_result in ['Proceso', 'Reparo']:
                 for doc in docs:
                     self.enviar_email(doc)
+                self.tipo_trabajo = 'persistencia'
+                persistente = self.env[
+                                'ir.config_parameter'].sudo().get_param(
+                                        'account.auto_send_persistencia',
+                                        default=24)
+                self.date_time = (datetime.now() + timedelta(
+                                    hours=int(persistente)
+                                ))
+                return
             self.unlink()
             return
         if self.tipo_trabajo == 'consulta':
@@ -97,7 +133,10 @@ class ColaEnvio(models.Model):
                 _logger.warning(str(e))
         elif self.tipo_trabajo == 'envio' and (not docs[0].sii_xml_request or not docs[0].sii_xml_request.sii_send_ident or docs[0].sii_xml_request.state not in ['Aceptado', 'Enviado']):
             try:
-                envio_id = docs.with_context(user=self.user_id.id).do_dte_send(self.n_atencion)
+                envio_id = docs.with_context(
+                            user=self.user_id.id,
+                            company_id=self.companuy_id.id).do_dte_send(
+                                                            self.n_atencion)
                 if envio_id.sii_send_ident:
                     self.tipo_trabajo = 'consulta'
                 docs.get_sii_result()
@@ -106,7 +145,6 @@ class ColaEnvio(models.Model):
                 _logger.warning(str(e))
         elif self.tipo_trabajo == 'envio' and docs[0].sii_xml_request and (docs[0].sii_xml_request.sii_send_ident or docs[0].sii_xml_request.state in [ 'Aceptado', 'Enviado', 'Rechazado']):
             self.tipo_trabajo = 'consulta'
-
 
     @api.model
     def _cron_procesar_cola(self):

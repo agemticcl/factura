@@ -14,7 +14,7 @@ class ResConfigSettings(models.TransientModel):
             string="Enviar Email automático al Auto Enviar DTE al SII",
             default=True,
         )
-    auto_send_persistencia = fields.Boolean(
+    auto_send_persistencia = fields.Integer(
             string="Enviar Email automático al Cliente cada  n horas",
             default=24,
         )

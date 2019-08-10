@@ -135,7 +135,7 @@ class ColaEnvio(models.Model):
             try:
                 envio_id = docs.with_context(
                             user=self.user_id.id,
-                            company_id=self.companuy_id.id).do_dte_send(
+                            company_id=self.company_id.id).do_dte_send(
                                                             self.n_atencion)
                 if envio_id.sii_send_ident:
                     self.tipo_trabajo = 'consulta'

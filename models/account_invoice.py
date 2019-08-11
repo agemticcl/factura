@@ -2242,7 +2242,7 @@ version="1.0">
         for dte_email in dte_receptors:
             if not dte_email.send_dte or not dte_email.email:
                 continue
-            if dte_email.email in ['facturacionmipyme2@sii.cl',
+            if dte_email.email.lower() in ['facturacionmipyme2@sii.cl',
                                    'facturacionmipyme@sii.cl']:
                 resp = self.env['sii.respuesta.cliente'].sudo().search([
                         ('exchange_id', '=', att.id)])

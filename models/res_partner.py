@@ -291,7 +291,7 @@ class ResPartner(models.Model):
     def _process_data(self, data={}):
         if data.get('razon_social'):
             self.name = data['razon_social']
-        if data.get('dte_email') and data['dte_email'] not in ['facturacionmipyme2@sii.cl', 'facturacionmipyme@sii.cl']:
+        if data.get('dte_email') and data.get('dte_email', '').lower() not in ['facturacionmipyme2@sii.cl', 'facturacionmipyme@sii.cl']:
             self.dte_email = data['dte_email']
         if data.get('email'):
             self.name = data['email']
@@ -391,10 +391,13 @@ class ResPartner(models.Model):
                     message = data['message']
                 else:
                     message = str(resp.data)
-                self.env['bus.bus'].sendone((self._cr.dbname, 'res.partner', self.env.user.partner_id.id), {
+                self.env['bus.bus'].sendone(
+                    (self._cr.dbname, 'res.partner',
+                     self.env.user.partner_id.id), {
                         'title': "Error en conexión al obtener partners",
                         'message': message,
-                        'url': {'name': 'ir a sre.cl', 'uri': 'https://sre.cl'},
+                        'url': {'name': 'ir a sre.cl', 'uri': 'https://sre.cl'
+                                },
                         'type': 'dte_notif',
                     })
                 return
@@ -413,9 +416,11 @@ class ResPartner(models.Model):
         if self.sync:
             return
         try:
-            if self.document_number and self.check_vat_cl(self.document_number.replace('.', '').replace('-', '')):
+            if self.document_number and self.check_vat_cl(
+                    self.document_number.replace('.', '').replace('-', '')):
                 self.get_remote_user_data(self.document_number)
-            elif self.name and self.check_vat_cl(self.name.replace('.', '').replace('-', '')):
+            elif self.name and self.check_vat_cl(
+                    self.name.replace('.', '').replace('-', '')):
                 self.get_remote_user_data(self.name)
         except:
             pass

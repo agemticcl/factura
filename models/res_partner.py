@@ -326,6 +326,8 @@ class ResPartner(models.Model):
         sync = ICPSudo.get_param('partner.sync_remote_partners')
         if not url or not token or not sync:
             return
+        if self.document_number in [False, 0, '0']:
+            return
         try:
             resp = pool.request(
                     'PUT',
@@ -416,6 +418,8 @@ class ResPartner(models.Model):
         if self.sync:
             return
         try:
+            if self.document_number in [False, 0, '0']:
+                return
             if self.document_number and self.check_vat_cl(
                     self.document_number.replace('.', '').replace('-', '')):
                 self.get_remote_user_data(self.document_number)

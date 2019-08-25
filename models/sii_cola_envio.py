@@ -85,10 +85,10 @@ class ColaEnvio(models.Model):
                 if not docs:
                     self.unlink()
                 else:
-                    persistente = self.env[
+                    persistente = int(self.env[
                                     'ir.config_parameter'].sudo().get_param(
                                             'account.auto_send_persistencia',
-                                            default=24)
+                                            default=24))
                     self.date_time = (datetime.now() + timedelta(
                                         hours=int(persistente)
                                     ))
@@ -115,10 +115,10 @@ class ColaEnvio(models.Model):
                 for doc in docs:
                     self.enviar_email(doc)
                 self.tipo_trabajo = 'persistencia'
-                persistente = self.env[
+                persistente = int(self.env[
                                 'ir.config_parameter'].sudo().get_param(
                                         'account.auto_send_persistencia',
-                                        default=24)
+                                        default=24))
                 self.date_time = (datetime.now() + timedelta(
                                     hours=int(persistente)
                                 ))

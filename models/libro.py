@@ -959,7 +959,7 @@ version="1.0">
                 for v in lista:
                     if v in value:
                         total[v] = value[v]
-                ResumenPeriodo.extend([{'TotalesPeriodo':total}])
+                ResumenPeriodo.extend([{'TotalesPeriodo': total}])
         dte = collections.OrderedDict()
         if ResumenPeriodo:
             dte['ResumenPeriodo'] = ResumenPeriodo
@@ -969,7 +969,7 @@ version="1.0">
         RUTEmisor = self.format_vat(company_id.vat)
         xml = dicttoxml.dicttoxml(
             dte, root=False, attr_type=False).decode()
-        doc_id =  self.tipo_operacion+'_'+self.periodo_tributario
+        doc_id = '%s_%s' % (self.tipo_operacion, self.periodo_tributario)
         libro = self.create_template_envio(
                     RUTEmisor,
                     self.periodo_tributario,

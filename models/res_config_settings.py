@@ -55,8 +55,8 @@ class ResConfigSettings(models.TransientModel):
                     'account.auto_send_dte', default=12))
         account_auto_send_email = ICPSudo.get_param(
                     'account.auto_send_email', default=True)
-        account_auto_send_persistencia = ICPSudo.get_param(
-                    'account.auto_send_persistencia', default=24)
+        account_auto_send_persistencia = int(ICPSudo.get_param(
+                    'account.auto_send_persistencia', default=24))
         account_limit_dte_lines = ICPSudo.get_param(
                     'account.limit_dte_lines', default=False)
         partner_url_remote_partners = ICPSudo.get_param(

@@ -2035,7 +2035,7 @@ version="1.0">
         elif resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] in ["DNK", "FAU", "RCT", "FNA"]:
             return "Rechazado"
         elif resp['SII:RESPUESTA']['SII:RESP_HDR']['ESTADO'] in ["FAN", "ANC"]:
-            return "Anulado" #Desde El sii o por NC
+            return "Anulado"  #Desde El sii o por NC
 
     @api.onchange('sii_message')
     def get_sii_result(self):
@@ -2248,7 +2248,7 @@ version="1.0">
                         ('exchange_id', '=', att.id)])
                 resp.estado = '0'
                 continue
-            email_to += dte_email.email+','
+            email_to += dte_email.email + ','
         if email_to == '':
             return
         values = {

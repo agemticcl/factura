@@ -418,6 +418,8 @@ class APICAF(models.TransientModel):
             for r in self.lineas_disponibles:
                 if r.selected:
                     caf = r
+            if not caf:
+                raise UserError("Debe seleccionar Uno")
             peticion.update(
                     form_name=caf.form_name
                 )

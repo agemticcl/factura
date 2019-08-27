@@ -1,4 +1,5 @@
 facturacion-electronica>=0.5.4
+facturacion-electronica
 suds-jurko
 num2words
 xlsxwriter
